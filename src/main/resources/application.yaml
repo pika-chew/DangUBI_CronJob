@@ -1,3 +1,19 @@
 spring:
   application:
     name: dangUBI
+  main:
+    # HTTP 서버 없이 Job 하나를 실행하고 종료한다.
+    web-application-type: none
+  batch:
+    job:
+      # 실행할 Job은 --spring.batch.job.name=<jobName> 인자로 고른다.
+      enabled: true
+    jdbc:
+      # Spring Batch 메타 테이블(BATCH_*)은 MySQL에 둔다.
+      # 운영은 never: 테이블을 미리 만들어 둔다(spring-batch-core jar의 org/springframework/batch/core/schema-mysql.sql).
+      # 로컬은 application-local.yaml에서 always로 덮어쓴다.
+      initialize-schema: never
+  # 접속 정보는 환경 변수로 받는다: SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD
+  jpa:
+    hibernate:
+      ddl-auto: none
