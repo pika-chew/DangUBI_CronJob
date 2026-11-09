@@ -11,7 +11,7 @@ docker compose up -d          # 로컬 MySQL (localhost:3306, db/user/password: 
 
 java -jar build/libs/dangUBI-0.0.1-SNAPSHOT.jar \
   --spring.profiles.active=local \
-  --spring.batch.job.name=sampleJob \
+  --spring.batch.job.name=reconcileJob \
   targetDate=2026-11-08
 ```
 
@@ -27,3 +27,11 @@ java -jar build/libs/dangUBI-0.0.1-SNAPSHOT.jar \
 | `SPRING_DATASOURCE_URL` | 예: `jdbc:mysql://<host>:3306/ubi` |
 | `SPRING_DATASOURCE_USERNAME` | Vault → Secret |
 | `SPRING_DATASOURCE_PASSWORD` | Vault → Secret |
+
+## Job 목록
+
+| Job | 파라미터 | 설명 |
+| --- | --- | --- |
+| `reconcileJob` | `targetDate` (필수, yyyy-MM-dd) | S3 원본 목록과 Swift 목록을 키로 비교해 Swift에 없는 객체를 SQS로 재큐잉한다. 직접 복사하지 않는다. |
+
+S3·Swift·SQS 구현체(`infra/`)는 아직 껍데기라 실제 실행하면 `UnsupportedOperationException`으로 실패한다. 동작은 테스트(H2 + Mock)로 확인한다.
