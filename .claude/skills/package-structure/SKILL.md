@@ -118,7 +118,18 @@ Job·Step은 흐름만 조합하고, 규칙 자체는 `domain`에 둔다. Job은
 
 ## 테스트
 
-`src/test/java` 아래에 대상 클래스와 같은 패키지 경로로 두고, 이름은 `{대상클래스}Test`로 한다. Job 전체를 실행하는 통합 테스트는 `batch/{job}` 바로 아래에 `{Job}JobTest`로 두고, `spring-boot-starter-batch-test`의 테스트 유틸로 Job·Step을 실행한다.
+코드를 만들 때 테스트도 같이 만든다. 클래스 단위로 단위 테스트를 쓰고, 상위 레이어로 갈수록 그 레이어에 필요한 통합 테스트를 더한다.
+
+| 대상 | 종류 | 방법 |
+| --- | --- | --- |
+| Tasklet, Processor, Policy, Validator 등 | 단위 | 스프링 컨텍스트 없이 직접 생성. Step 실행 정보가 필요하면 `MetaDataInstanceFactory` |
+| Reader, Writer, Adaptor, DomainService | DB 통합 | `@SpringBootTest` 또는 `@DataJpaTest` + H2 |
+| Job·Step | Job 통합 | `@SpringBatchTest` + `@SpringBootTest`, `JobOperatorTestUtils`로 Job·Step 실행. 끝나면 `JobRepositoryTestUtils.removeJobExecutions()` |
+
+- 데이터베이스는 외부 MySQL 대신 H2 메모리 DB(MySQL 호환 모드)를 쓴다. 설정은 `src/test/resources/application-test.yaml`에 있고, 스프링 테스트에는 `@ActiveProfiles("test")`를 붙인다.
+- H2가 지원하지 않는 MySQL 전용 기능(`GET_LOCK` 등)은 인터페이스 뒤로 숨기고 테스트에서 대체 구현을 쓴다.
+- `src/test/java` 아래에 대상 클래스와 같은 패키지 경로로 두고, 이름은 `{대상클래스}Test`로 한다. Job 통합 테스트는 `batch/{job}` 바로 아래에 `{Job}JobTest`로 둔다.
+- 테스트 메서드 이름은 한글로 동작을 설명한다. 예: `같은_targetDate로_이미_완료됐으면_다시_실행되지_않는다`
 
 ## 리소스
 
