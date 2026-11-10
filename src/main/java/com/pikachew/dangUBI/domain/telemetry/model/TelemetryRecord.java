@@ -1,4 +1,4 @@
-package com.pikachew.dangUBI.batch.ingest.dto;
+package com.pikachew.dangUBI.domain.telemetry.model;
 
 import java.time.Instant;
 

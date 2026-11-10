@@ -1,11 +1,12 @@
-package com.pikachew.dangUBI.batch.ingest.processor;
+package com.pikachew.dangUBI.domain.telemetry.policy;
 
 import java.time.Instant;
 import java.util.regex.Pattern;
 
-import com.pikachew.dangUBI.batch.ingest.dto.MicrotripRecord;
-import com.pikachew.dangUBI.batch.ingest.dto.TelemetryRecord;
-import com.pikachew.dangUBI.batch.ingest.dto.TripRecord;
+import com.pikachew.dangUBI.domain.telemetry.exception.TelemetryHandler;
+import com.pikachew.dangUBI.domain.telemetry.model.MicrotripRecord;
+import com.pikachew.dangUBI.domain.telemetry.model.TelemetryRecord;
+import com.pikachew.dangUBI.domain.telemetry.model.TripRecord;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
@@ -13,17 +14,17 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * JSONL 한 줄을 {@link TelemetryRecord}로 바꾼다.
+ * 수집 메시지(JSONL 한 줄)를 {@link TelemetryRecord}로 해석하는 규칙.
  *
- * 처리 규칙
- * - 키 필드(vehicleId, idempotencyKey, ty, schemaVersion, pld.tid, microtrip의 pld.clt)가 없거나 형식이 틀리면 줄 전체를 버린다.
- * - 지원하지 않는 ty·schemaVersion도 줄 전체를 버린다.
+ * - 키 필드(vehicleId, idempotencyKey, ty, schemaVersion, pld.tid, microtrip의 pld.clt)가 없거나 형식이 틀리면
+ *   {@link TelemetryHandler}를 던진다. 호출한 쪽은 그 줄을 버린다.
+ * - 지원하지 않는 ty·schemaVersion도 {@link TelemetryHandler}를 던진다.
  * - 나머지 필드는 형식이 틀리면 그 필드만 null로 두고 경고 로그를 남긴다. 원본은 Swift에 남아 있다.
  * - 숫자 필드는 JSON 숫자와 숫자 문자열을 모두 받는다.
  */
 @Slf4j
 @Component
-public class TelemetryLineParser {
+public class TelemetryRecordResolver {
 
 	public static final int TY_TRIP = 3;
 	public static final int TY_MICROTRIP = 4;
@@ -33,18 +34,15 @@ public class TelemetryLineParser {
 
 	private final JsonMapper jsonMapper = JsonMapper.shared();
 
-	/**
-	 * @throws InvalidTelemetryLineException 줄을 버려야 할 때. 메시지에 이유가 들어간다.
-	 */
-	public TelemetryRecord parse(String line) {
+	public TelemetryRecord resolve(String line) {
 		JsonNode root;
 		try {
 			root = jsonMapper.readTree(line);
 		} catch (JacksonException e) {
-			throw new InvalidTelemetryLineException("JSON 형식이 아닙니다");
+			throw TelemetryHandler.INVALID_JSON;
 		}
 		if (root == null || !root.isObject()) {
-			throw new InvalidTelemetryLineException("JSON 객체가 아닙니다");
+			throw TelemetryHandler.INVALID_JSON;
 		}
 
 		String vehicleId = requiredText(root, "vehicleId");
@@ -52,11 +50,11 @@ public class TelemetryLineParser {
 		int ty = requiredInt(root, "ty");
 		int schemaVersion = requiredInt(root, "schemaVersion");
 		if (schemaVersion != SUPPORTED_SCHEMA_VERSION) {
-			throw new InvalidTelemetryLineException("지원하지 않는 schemaVersion: " + schemaVersion);
+			throw TelemetryHandler.unsupportedSchemaVersion(schemaVersion);
 		}
 		JsonNode pld = root.get("pld");
 		if (pld == null || !pld.isObject()) {
-			throw new InvalidTelemetryLineException("pld가 없습니다");
+			throw TelemetryHandler.missingField("pld");
 		}
 
 		Fields fields = new Fields(idempotencyKey);
@@ -103,14 +101,14 @@ public class TelemetryLineParser {
 						fields.integer(pld, "vv"),
 						fields.integer(pld, "tpos"));
 			}
-			default -> throw new InvalidTelemetryLineException("지원하지 않는 ty: " + ty);
+			default -> throw TelemetryHandler.unsupportedType(ty);
 		};
 	}
 
 	private static String requiredText(JsonNode parent, String name) {
 		JsonNode node = parent.get(name);
 		if (node == null || !node.isString() || node.stringValue().isBlank()) {
-			throw new InvalidTelemetryLineException(name + "가 없거나 문자열이 아닙니다");
+			throw TelemetryHandler.missingField(name);
 		}
 		return node.stringValue();
 	}
@@ -118,7 +116,7 @@ public class TelemetryLineParser {
 	private static int requiredInt(JsonNode parent, String name) {
 		Long value = toLong(parent.get(name));
 		if (value == null || value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
-			throw new InvalidTelemetryLineException(name + "가 없거나 정수가 아닙니다");
+			throw TelemetryHandler.missingField(name);
 		}
 		return value.intValue();
 	}
@@ -126,7 +124,7 @@ public class TelemetryLineParser {
 	private static long requiredLong(JsonNode parent, String name) {
 		Long value = toLong(parent.get(name));
 		if (value == null) {
-			throw new InvalidTelemetryLineException(name + "가 없거나 정수가 아닙니다");
+			throw TelemetryHandler.missingField(name);
 		}
 		return value;
 	}
