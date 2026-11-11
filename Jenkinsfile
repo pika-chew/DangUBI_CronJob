@@ -110,14 +110,17 @@ pipeline {
                             docker run --rm -u 0 -v "$GRADLE_CACHE:/cache" "$JDK_IMAGE" chown "$(id -u):$(id -g)" /cache
                         '''
                     }
+                    post { failure { recordFailedStage() } }
                 }
 
+                // 찾은 비밀값은 리포트에 가려서(--redact) 남긴다
                 stage('Secret Scan') {
                     steps {
                         inContainer(env.GITLEAKS_IMAGE) {
                             sh 'gitleaks detect --source . --no-banner --redact --report-path "$REPORT_DIR/gitleaks.json"'
                         }
                     }
+                    post { failure { recordFailedStage() } }
                 }
 
                 // 테스트는 H2 메모리 DB(test 프로필)로 돌아서 외부 MySQL이 필요 없다
@@ -129,8 +132,16 @@ pipeline {
                     }
                     post {
                         always {
-                            junit allowEmptyResults: true, testResults: 'build/test-results/test/*.xml'
+                            script {
+                                // 실패 알림에 붙일 테스트 개수 (컴파일 실패 등으로 결과 파일이 없으면 null)
+                                def result = junit allowEmptyResults: true, testResults: 'build/test-results/test/*.xml'
+                                if (result) {
+                                    env.TEST_FAIL_COUNT = result.failCount.toString()
+                                    env.TEST_TOTAL_COUNT = result.totalCount.toString()
+                                }
+                            }
                         }
+                        failure { recordFailedStage() }
                     }
                 }
 
@@ -141,6 +152,7 @@ pipeline {
                             sh './gradlew bootJar -x test --no-daemon'
                         }
                     }
+                    post { failure { recordFailedStage() } }
                 }
 
                 // Gradle lockfile이 없어 build.gradle만으로는 의존성 버전을 알 수 없으므로,
@@ -148,9 +160,10 @@ pipeline {
                 stage('SCA') {
                     steps {
                         inContainer(env.TRIVY_IMAGE) {
-                            sh 'trivy rootfs --cache-dir .trivy-cache --scanners vuln --severity HIGH,CRITICAL --exit-code 1 build/libs'
+                            trivyScan('trivy-sca.txt', 'rootfs --scanners vuln --severity HIGH,CRITICAL build/libs')
                         }
                     }
+                    post { failure { recordFailedStage() } }
                 }
 
                 // ───────────────────── main 이미지 릴리스 ─────────────────────
@@ -169,9 +182,10 @@ pipeline {
                                     '''
                                 }
                                 inContainer(env.TRIVY_IMAGE, dockerSocketArgs()) {
-                                    sh 'trivy image --cache-dir .trivy-cache --severity CRITICAL --ignore-unfixed --exit-code 1 "$IMAGE_REPO:$IMAGE_TAG"'
+                                    trivyScan('trivy-image.txt', 'image --severity CRITICAL --ignore-unfixed "$IMAGE_REPO:$IMAGE_TAG"')
                                 }
                             }
+                            post { failure { recordFailedStage() } }
                         }
 
                         stage('Push to GHCR') {
@@ -198,6 +212,7 @@ pipeline {
                                     }
                                 }
                             }
+                            post { failure { recordFailedStage() } }
                         }
 
                         stage('Update GitOps') {
@@ -212,6 +227,7 @@ pipeline {
                                     }
                                 }
                             }
+                            post { failure { recordFailedStage() } }
                         }
                     }
                 }
@@ -241,11 +257,11 @@ pipeline {
                     notifyMain('danger', "🔴 *main GitOps 갱신 실패* · 이미지는 push됨. `${env.GITOPS_FILE}`의 `${env.KUSTOMIZE_IMAGE}`를 직접 맞춰 주세요:\n" +
                         "`${env.IMAGE_REPO}:${env.IMAGE_TAG}@${env.IMAGE_DIGEST}`")
                 } else if (env.BRANCH_NAME == 'main') {
-                    notifyMain('danger', "🔴 *main 실패* · 배포된 이미지는 바뀌지 않음 · ${buildLink('console', 'Console Output')}")
+                    notifyMain('danger', "🔴 *main 실패* · 배포된 이미지는 바뀌지 않음\n${failureDetail()}")
                 } else if (env.CHANGE_ID) {
-                    slackSend(channel: env.SLACK_CHANNEL, color: 'danger', message: "🔴 *${APP_NAME}* ${prLine()} 검사 실패 · ${buildLink('console', 'Console Output')}")
+                    slackSend(channel: env.SLACK_CHANNEL, color: 'danger', message: "🔴 *${APP_NAME}* ${prLine()} 검사 실패\n${failureDetail()}")
                 } else if (env.BRANCH_NAME == 'develop') {
-                    slackSend(channel: env.SLACK_CHANNEL, color: 'danger', message: "🔴 *${APP_NAME}* develop 검사 실패\n${commitLine()} · ${buildLink('console', 'Console Output')}")
+                    slackSend(channel: env.SLACK_CHANNEL, color: 'danger', message: "🔴 *${APP_NAME}* develop 검사 실패\n${failureDetail()}\n${commitLine()}")
                 }
             }
         }
@@ -350,6 +366,63 @@ def syncGitOpsImage() {
             '''
         }
     }
+}
+
+// Trivy 결과를 콘솔과 리포트 파일에 같이 남긴다. 취약점이 있으면 리포트를 출력한 뒤 실패로 끝낸다.
+// (--output을 쓰면 콘솔에는 아무것도 나오지 않으므로 파일을 다시 출력한다)
+def trivyScan(String reportName, String args) {
+    withEnv(["TRIVY_REPORT=${env.REPORT_DIR}/${reportName}"]) {
+        sh """
+            rc=0
+            trivy ${args} --cache-dir .trivy-cache --exit-code 1 --output "\$TRIVY_REPORT" || rc=\$?
+            [ -f "\$TRIVY_REPORT" ] && cat "\$TRIVY_REPORT"
+            exit \$rc
+        """
+    }
+}
+
+// 실패한 단계 이름을 남긴다. 가장 먼저 실패한 단계만 기록한다.
+def recordFailedStage() {
+    if (!env.FAILED_STAGE) {
+        env.FAILED_STAGE = env.STAGE_NAME
+    }
+}
+
+// 실패 알림에 붙일 내용: 실패한 단계, 단계별 원인을 볼 수 있는 곳(테스트 결과·스캔 리포트), 콘솔 로그 링크
+def failureDetail() {
+    def parts = []
+    if (env.FAILED_STAGE) {
+        parts << "*${env.FAILED_STAGE}* 단계에서 실패"
+    }
+    def detail = null
+    switch (env.FAILED_STAGE) {
+        case 'Test':
+            if (env.TEST_FAIL_COUNT && env.TEST_FAIL_COUNT != '0') {
+                detail = "테스트 ${env.TEST_FAIL_COUNT}개 실패 / 전체 ${env.TEST_TOTAL_COUNT}개 (${buildLink('testReport/', '테스트 결과')})"
+            } else {
+                detail = "테스트 결과 없음 (컴파일 오류 등)"
+            }
+            break
+        case 'Secret Scan':
+            detail = reportLink('gitleaks.json', '비밀값이 커밋에 포함됨')
+            break
+        case 'SCA':
+            detail = reportLink('trivy-sca.txt', '의존성 취약점(HIGH/CRITICAL) 발견')
+            break
+        case 'Image Build & Scan':
+            detail = reportLink('trivy-image.txt', '이미지 취약점(CRITICAL) 발견')
+            break
+    }
+    if (detail) {
+        parts << detail
+    }
+    parts << buildLink('console', 'Console Output')
+    return parts.join(' · ')
+}
+
+// 리포트 파일이 있을 때만 설명과 링크를 만든다 (스캔 전에 실패했으면 파일이 없다)
+def reportLink(String reportName, String label) {
+    fileExists("${env.REPORT_DIR}/${reportName}") ? "${label} (${buildLink("artifact/${env.REPORT_DIR}/${reportName}", reportName)})" : null
 }
 
 // main 결과 알림. 어떤 커밋의 어느 빌드인지를 함께 붙인다.
