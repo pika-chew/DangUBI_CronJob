@@ -35,7 +35,8 @@ infra ──────┘
 ```
 
 - `domain`은 `batch`, `infra`를 import하지 않는다. `common`만 쓴다.
-- `batch`는 `domain`과 `common`을 쓴다. 쓰기 로직은 Writer·Tasklet에서 직접 구현하지 않고 `DomainService`를 호출한다.
+- `batch`는 `domain`과 `common`을 쓴다.
+- 서비스 레이어(`DomainService`)를 쓸지는 아직 정하지 않았다. 사용자가 정하기 전까지 `service/` 패키지와 `@DomainService`를 만들지 않는다.
 - `infra`는 `domain`이나 `batch`에 정의된 인터페이스(포트)를 구현하는 방향으로만 의존한다. `batch`와 `domain`이 `infra`의 구체 클래스에 의존하게 만들지 않는다.
 - `common`은 특정 기능 패키지에 의존하지 않는다.
 
@@ -98,7 +99,7 @@ common/
 | Reader | `batch/{job}/reader` | `{Name}Reader` | 조회 전용. 대량 조회는 페이징·커서 Reader를 쓰고, 단건 조회는 `Adaptor`를 쓴다 |
 | Processor | `batch/{job}/processor` | `{Name}Processor` | 변환·필터링만 한다. 저장하지 않는다. 걸러낼 항목은 `null`을 반환한다. 포트에서 올라온 인프라 예외는 여기서 `ErrorStatus`로 바꿔 던진다 |
 | 포트 | `batch/{job}/port` | 역할 이름 (예: `TelemetryFileReader`) | 외부 데이터를 도메인 모델(`Snapshot`)이나 Step 중간 데이터로 돌려준다. 저장 경로·파일 형식을 드러내지 않는다 |
-| Writer | `batch/{job}/writer` | `{Name}Writer` | 저장·변경은 `DomainService`에 위임한다 |
+| Writer | `batch/{job}/writer` | `{Name}Writer` | 저장·변경을 맡는다. 어느 레이어에 둘지는 서비스 레이어 결정을 따른다 |
 | Tasklet | `batch/{job}/tasklet` | `{Name}Tasklet` | chunk로 나눌 필요 없는 단일 작업(정리, 집계, 알림 등)에만 쓴다 |
 | 스케줄러 | `batch/{job}/scheduler` | `{Job}JobScheduler` | 앱 안에서 cron으로 실행할 때만 만든다. Job 실행만 하고 로직은 두지 않는다. cron 표현식은 `application.yaml`에서 주입받는다 |
 | 엔티티 | `domain/{feature}/entity` | 명사 | `BaseTimeEntity` 상속(생성·수정 시각은 Hibernate `@CreationTimestamp`·`@UpdateTimestamp`). 생성은 private 생성자에 `@Builder`를 붙여 builder로만 한다. 정적 생성 메서드(`of`, `start` 등)나 public 생성자를 두지 않고, 기본 생성자는 `@NoArgsConstructor(access = PROTECTED)`. 외부 값(Snapshot)을 엔티티로 옮기는 일은 DomainService에서 builder로 한다. 상태 변경은 setter 대신 의도가 드러나는 메서드로 한다 |
@@ -113,6 +114,7 @@ common/
 | 에러 코드 | `common/exception` | `ErrorStatus` | `BaseErrorCode` 구현 enum 하나에 `(Integer code, String message)`로 모은다. 기능별로 코드 번호대를 나눠 주석으로 구분한다 (예: `// 수집 적재 오류 (6000번대)`). HTTP 응답이 없어 HTTP 상태는 두지 않는다 |
 
 - 인터페이스와 구현체는 같은 패키지에 두고, 구현체 이름은 인터페이스 이름에 `Impl`을 붙인다.
+- 메서드 하나는 역할 하나만 한다. 조회와 생성·변경을 한 메서드에 섞지 않는다. `getOrCreate`, `findOrCreate`, `findOrStart`, `upsert` 같은 메서드를 만들지 않고, 조회 메서드와 생성 메서드를 따로 둔다.
 - `batch`가 외부 시스템을 호출해야 하면 `batch/{job}/port`에 인터페이스를 두고 구현체는 `infra/{system}`에 둔다. 외부 파일·메시지의 형식(gz, JSONL, CSV, 필드 이름)과 저장 경로 규칙은 infra가 안다.
 - import 순서: static → `java` → `org` → `com.pikachew` → `jakarta`·`lombok`·기타, 그룹 사이 빈 줄.
 - `@Service` 대신 `common/annotation`의 `@Adaptor`, `@DomainService`, `@Validator`를 쓴다. 이 어노테이션들이 아직 없으면 처음 필요한 시점에 `common/annotation`에 만든다.
@@ -125,8 +127,8 @@ common/
 
 ```
 Scheduler(또는 외부 cron) ─▶ Job ─▶ Step
-                                     ├─ chunk:   Reader ─▶ Processor ─▶ Writer ─▶ DomainService ─▶ Repository
-                                     └─ tasklet: Tasklet ─▶ Adaptor / DomainService
+                                     ├─ chunk:   Reader ─▶ Processor ─▶ Writer ─▶ Repository
+                                     └─ tasklet: Tasklet ─▶ Adaptor / Repository
 ```
 
 Job·Step은 흐름만 조합하고, 규칙 자체는 `domain`에 둔다. Job은 같은 파라미터로 다시 돌려도 결과가 같도록(멱등) 만든다.
