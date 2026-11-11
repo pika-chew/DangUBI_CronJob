@@ -105,6 +105,9 @@ common/
 - `batch`가 외부 시스템을 호출해야 하면 `batch/{job}/port`에 인터페이스를 두고 구현체는 `infra/{system}`에 둔다.
 - `@Service` 대신 `common/annotation`의 `@Adaptor`, `@DomainService`, `@Validator`를 쓴다. 이 어노테이션들이 아직 없으면 처음 필요한 시점에 `common/annotation`에 만든다.
 - Job·Step 이름 문자열은 `JobConfig`의 상수로만 참조하고, 다른 곳에 하드코딩하지 않는다.
+- 고정값(경로 prefix, 날짜 포맷, 정규식, 메시지 타입 코드 등)은 클래스 안에 `private static final`로 두지 않고 `common/consts/{Name}StaticValues`에 `public static final`로 모은다. 쓰는 쪽은 static import한다.
+- 특정 기능에 묶이지 않는 함수(JSON 값 꺼내기 등)는 `common/util/{Name}Utils`에 static 메서드로 둔다. 상수 클래스와 Utils 클래스는 `final`이고 생성자는 private이다. Utils에도 단위 테스트를 쓴다.
+- 기능 예외를 던지는 검증처럼 특정 도메인 규칙이 들어간 함수는 Utils로 빼지 않고 그 도메인 클래스에 둔다.
 
 ## Job 한 번의 흐름
 
