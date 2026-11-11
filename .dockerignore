@@ -1,5 +1,0 @@
-# 빌드 컨텍스트에는 bootJar만 보낸다 (소스·.git·.gradle 캐시 등은 이미지에 필요 없다)
-*
-!build/libs/*.jar
-# Spring Boot가 같이 만드는 의존성 없는 jar는 실행할 수 없으므로 뺀다
-build/libs/*-plain.jar
