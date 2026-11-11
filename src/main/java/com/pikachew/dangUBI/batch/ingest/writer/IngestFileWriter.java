@@ -43,6 +43,16 @@ import lombok.extern.slf4j.Slf4j;
  *
  * TODO: 두 실행이 같은 trip을 동시에 처음 만들면 유니크 충돌로 chunk가 실패한다. 지금은 CronJob 동시 실행 금지로 막는다.
  * TODO: microtrip이 많아 IDENTITY 단건 insert가 느리면 JDBC batch insert로 바꾼다.
+ *
+ * ============================================================================================
+ * [MEMORY RISK] chunk 하나의 데이터와 엔티티가 커밋 전까지 전부 메모리에 남는다 — 장애 테스트 필수 확인 지점
+ * ============================================================================================
+ * - write()에 들어오는 chunk = 파일 chunk-size개의 Snapshot 전부 (TelemetryJsonlParser 참고).
+ * - 여기서 저장·조회한 Driver·Trip·TripMicrotrip 엔티티는 chunk 커밋 전까지 Hibernate 영속성 컨텍스트에 계속 남는다.
+ *   microtrip이 수십만 건이면 Snapshot + 엔티티가 동시에 메모리에 있다.
+ * - queryTrips는 "차량 수 × tid 수" 범위로 넓게 가져온 뒤 거른다. chunk-size를 키우면 조회량과 메모리가 함께 커진다.
+ * - 장애 테스트: 큰 chunk에서 힙 사용량, GC 시간, 커밋 시간(flush)을 확인한다.
+ * - 대응: chunk-size 축소, 일정 건수마다 flush·clear, JDBC batch insert.
  */
 @Slf4j
 @Component
@@ -114,6 +124,7 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 		return saved;
 	}
 
+	// [MEMORY RISK] 차량 수 × tid 수 범위로 넓게 조회한 뒤 거른다. chunk가 클수록 불필요하게 많이 가져온다
 	private Map<TripKey, Trip> queryTrips(Set<TripKey> keys) {
 		if (keys.isEmpty()) {
 			return new HashMap<>();
@@ -158,6 +169,7 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 	}
 
 	private void saveMicrotrips(List<MicrotripSnapshot> snapshots, Map<TripKey, Trip> trips) {
+		// [MEMORY RISK] 저장한 엔티티는 chunk 커밋 전까지 영속성 컨텍스트에 남는다
 		List<TripMicrotrip> microtrips = snapshots.stream()
 				.map(snapshot -> toMicrotrip(trips.get(new TripKey(snapshot.vehicleId(), snapshot.tid())), snapshot))
 				.toList();
