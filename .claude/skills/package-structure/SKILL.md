@@ -36,7 +36,7 @@ infra ──────┘
 
 ## Job·기능별 하위 패키지
 
-`batch` 아래는 Job 이름으로, `domain` 아래는 기능(도메인) 이름으로 한 번 더 나눈다. 패키지 이름은 소문자 단수형이다. 아래 하위 패키지 중 필요한 것만 만들고, 빈 패키지를 미리 만들어두지 않는다.
+`batch` 아래는 Job 이름으로, `domain` 아래는 저장하는 업무 대상 명사(`trip`, `driver` 등)로 한 번 더 나눈다. 엔티티가 없는 개념(파일 형식, 메시지 해석 등)으로 도메인을 만들지 않는다. 패키지 이름은 소문자 단수형이다. 아래 하위 패키지 중 필요한 것만 만들고, 빈 패키지를 미리 만들어두지 않는다.
 
 ```
 batch/
@@ -62,23 +62,25 @@ domain/
     ├── repository/      {Entity}Repository
     ├── adaptor/         {Entity}Adaptor, {Entity}AdaptorImpl
     ├── service/         {Feature}DomainService, {Feature}DomainServiceImpl
-    ├── exception/       {Feature}Handler
-    ├── model/           엔티티가 아닌 도메인 값 객체   (필요 시)
-    ├── policy/          {Name}Policy, {Name}Resolver   (필요 시)
+    ├── exception/       {Feature}Handler               (필요 시)
+    ├── model/           {Name}Snapshot (외부에서 읽은 아직 저장 전 값), {Name}Result (처리 결과) (필요 시)
+    ├── policy/          {Name}Policy                   (필요 시)
     └── validator/       {Feature}Validator, {Feature}ValidatorImpl (필요 시)
 
 infra/
-└── {system}/            연동 대상 이름. 예: kafka, fcm, openai
+└── {system}/            연동 대상 이름. 예: swift, sqs, kafka
     ├── config/          {System}Config, {System}Properties
-    ├── dto/             외부 시스템과 주고받는 메시지
-    └── {System}{Role}.java   Client, Sender, Mapper 등 구현체
+    ├── {System}Client.java              외부 시스템 접근
+    ├── {System}{Name}Reader.java 등     batch 포트 구현체
+    ├── {Name}Parser.java                외부 파일·메시지 형식 해석
+    └── {Name}Exception.java             인프라 예외 (RuntimeException)
 
 common/
 ├── annotation/          @Adaptor, @DomainService, @Validator
-├── config/              {Name}Config  (BatchConfig, JpaConfig 등)
+├── config/              {Name}Config  (필요 시)
 ├── consts/              {Name}StaticValues
-├── exception/           BaseErrorCode, ErrorStatus, GeneralException
-└── util/
+├── exception/           BaseCode, BaseErrorCode, Reason, ErrorStatus, GeneralException
+└── util/                {Name}Utils
 ```
 
 `batch`의 Job 이름과 `domain`의 기능 이름이 1:1일 필요는 없다. `batch`는 "무엇을 언제 처리하는가" 관점으로, `domain`은 데이터·규칙 관점으로 나눈다. Job 하나가 여러 도메인을 쓸 수 있다.
@@ -89,20 +91,25 @@ common/
 | --- | --- | --- | --- |
 | Job 설정 | `batch/{job}/config` | `{Job}JobConfig` | `@Configuration`. Job 이름을 `public static final String JOB_NAME`으로 두고, Job 빈은 `{job}Job`, Step 빈은 `{job}{Name}Step`으로 짓는다 |
 | Reader | `batch/{job}/reader` | `{Name}Reader` | 조회 전용. 대량 조회는 페이징·커서 Reader를 쓰고, 단건 조회는 `Adaptor`를 쓴다 |
-| Processor | `batch/{job}/processor` | `{Name}Processor` | 변환·필터링만 한다. 저장하지 않는다. 걸러낼 항목은 `null`을 반환한다 |
+| Processor | `batch/{job}/processor` | `{Name}Processor` | 변환·필터링만 한다. 저장하지 않는다. 걸러낼 항목은 `null`을 반환한다. 포트에서 올라온 인프라 예외는 여기서 `ErrorStatus`로 바꿔 던진다 |
+| 포트 | `batch/{job}/port` | 역할 이름 (예: `TelemetryFileReader`) | 외부 데이터를 도메인 모델(`Snapshot`)이나 Step 중간 데이터로 돌려준다. 저장 경로·파일 형식을 드러내지 않는다 |
 | Writer | `batch/{job}/writer` | `{Name}Writer` | 저장·변경은 `DomainService`에 위임한다 |
 | Tasklet | `batch/{job}/tasklet` | `{Name}Tasklet` | chunk로 나눌 필요 없는 단일 작업(정리, 집계, 알림 등)에만 쓴다 |
 | 스케줄러 | `batch/{job}/scheduler` | `{Job}JobScheduler` | 앱 안에서 cron으로 실행할 때만 만든다. Job 실행만 하고 로직은 두지 않는다. cron 표현식은 `application.yaml`에서 주입받는다 |
-| 엔티티 | `domain/{feature}/entity` | 명사 | `BaseTimeEntity` 상속. 상태 변경은 setter 대신 의도가 드러나는 메서드로 한다 |
+| 엔티티 | `domain/{feature}/entity` | 명사 | `BaseTimeEntity` 상속(생성·수정 시각은 Hibernate `@CreationTimestamp`·`@UpdateTimestamp`). 상태 변경은 setter 대신 의도가 드러나는 메서드로 한다 |
+| 모델 | `domain/{feature}/model` | `{Name}Snapshot`, `{Name}Result` | record. 외부에서 읽은 저장 전 값은 `Snapshot`, DomainService 처리 결과는 `Result` |
 | 리포지토리 | `domain/{feature}/repository` | `{Entity}Repository` | `JpaRepository` 상속 인터페이스 |
 | Adaptor | `domain/{feature}/adaptor` | `{Entity}Adaptor` + `Impl` | `@Adaptor`. 조회 전용이고 메서드는 `query...`로 시작한다. 없으면 `{Feature}Handler`의 예외를 던진다 |
-| DomainService | `domain/{feature}/service` | `{Feature}DomainService` + `Impl` | `@DomainService`. 생성·변경 같은 쓰기 로직을 맡는다. chunk 트랜잭션 안에서 호출되므로 별도 트랜잭션을 열지 않는다 |
+| DomainService | `domain/{feature}/service` | `{Feature}DomainService` + `Impl` | `@Transactional @DomainService @RequiredArgsConstructor`. 생성·변경 같은 쓰기 로직을 맡는다. 호출한 쪽(chunk) 트랜잭션에 합류한다. 다른 도메인의 쓰기는 그 도메인의 DomainService를 부른다 |
+| Policy | `domain/{feature}/policy` | `{Name}Policy` | 빈이 아닌 `final` 클래스 + static 메서드, private 생성자 |
 | Validator | `domain/{feature}/validator` | `{Feature}Validator` + `Impl` | `@Validator`. 비즈니스 규칙 검증 |
-| 예외 | `domain/{feature}/exception` | `{Feature}Handler` | `GeneralException` 상속. 예외 인스턴스를 `public static final` 상수로 정의한다 |
-| 에러 코드 | `common/exception` | `ErrorStatus` | enum 하나에 모으고, 기능별로 코드 번호대를 나눠 주석으로 구분한다 |
+| 도메인 예외 | `domain/{feature}/exception` | `{Feature}Handler` | `GeneralException` 상속, `public` 생성자 `(BaseErrorCode code)`. 예외는 `public static final GeneralException X = new {Feature}Handler(ErrorStatus.{FEATURE}_X)` 상수로만 정의하고 상세 메시지는 받지 않는다. 처음 필요할 때 만든다 |
+| 인프라 예외 | `infra/{system}` | `{Name}Exception` | `RuntimeException` 상속, 메시지(·원인)만 받는다. 호출한 쪽(Processor·Tasklet)이 `ErrorStatus`로 바꿔 던진다 |
+| 에러 코드 | `common/exception` | `ErrorStatus` | `BaseErrorCode` 구현 enum 하나에 `(Integer code, String message)`로 모은다. 기능별로 코드 번호대를 나눠 주석으로 구분한다 (예: `// 수집 적재 오류 (6000번대)`). HTTP 응답이 없어 HTTP 상태는 두지 않는다 |
 
 - 인터페이스와 구현체는 같은 패키지에 두고, 구현체 이름은 인터페이스 이름에 `Impl`을 붙인다.
-- `batch`가 외부 시스템을 호출해야 하면 `batch/{job}/port`에 인터페이스를 두고 구현체는 `infra/{system}`에 둔다.
+- `batch`가 외부 시스템을 호출해야 하면 `batch/{job}/port`에 인터페이스를 두고 구현체는 `infra/{system}`에 둔다. 외부 파일·메시지의 형식(gz, JSONL, CSV, 필드 이름)과 저장 경로 규칙은 infra가 안다.
+- import 순서: static → `java` → `org` → `com.pikachew` → `jakarta`·`lombok`·기타, 그룹 사이 빈 줄.
 - `@Service` 대신 `common/annotation`의 `@Adaptor`, `@DomainService`, `@Validator`를 쓴다. 이 어노테이션들이 아직 없으면 처음 필요한 시점에 `common/annotation`에 만든다.
 - Job·Step 이름 문자열은 `JobConfig`의 상수로만 참조하고, 다른 곳에 하드코딩하지 않는다.
 - 고정값(경로 prefix, 날짜 포맷, 정규식, 메시지 타입 코드 등)은 클래스 안에 `private static final`로 두지 않고 `common/consts/{Name}StaticValues`에 `public static final`로 모은다. 쓰는 쪽은 static import한다.
@@ -125,7 +132,7 @@ Job·Step은 흐름만 조합하고, 규칙 자체는 `domain`에 둔다. Job은
 
 | 대상 | 종류 | 방법 |
 | --- | --- | --- |
-| Tasklet, Processor, Policy, Validator 등 | 단위 | 스프링 컨텍스트 없이 직접 생성. Step 실행 정보가 필요하면 `MetaDataInstanceFactory` |
+| Tasklet, Processor, Policy, Validator, 엔티티, infra 파서·포트 구현체 등 | 단위 | 스프링 컨텍스트 없이 직접 생성. 의존 대상은 Mockito Mock. Step 실행 정보가 필요하면 `MetaDataInstanceFactory` |
 | Reader, Writer, Adaptor, DomainService | DB 통합 | `@SpringBootTest` 또는 `@DataJpaTest` + H2 |
 | Job·Step | Job 통합 | `@SpringBatchTest` + `@SpringBootTest`, `JobOperatorTestUtils`로 Job·Step 실행. 끝나면 `JobRepositoryTestUtils.removeJobExecutions()` |
 

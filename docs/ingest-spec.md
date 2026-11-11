@@ -98,7 +98,7 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 
 ## 7. 테이블
 
-컬럼 상세는 엔티티(`domain/trip/entity`)를 기준으로 한다. 시각은 UTC `DATETIME(3)`이다.
+컬럼 상세는 엔티티(`domain/driver/entity`, `domain/trip/entity`)와 `src/main/resources/db/trip-schema-mysql.sql`을 기준으로 한다. 시각은 UTC `DATETIME(3)`이다.
 
 | 표 | 키 | 내용 |
 | --- | --- | --- |
