@@ -382,12 +382,14 @@ def syncGitOpsImage() {
 
 // Trivy 결과를 콘솔과 리포트 파일에 같이 남긴다. 취약점이 있으면 리포트를 출력한 뒤 실패로 끝낸다.
 // (--output을 쓰면 콘솔에는 아무것도 나오지 않으므로 파일을 다시 출력한다)
+// 경로 변수 이름은 TRIVY_로 시작하면 안 된다. Trivy가 TRIVY_<플래그> 환경변수를 플래그 값으로 읽는다
+// (예: TRIVY_REPORT → --report 플래그로 해석되어 실패)
 def trivyScan(String reportName, String args) {
-    withEnv(["TRIVY_REPORT=${env.REPORT_DIR}/${reportName}"]) {
+    withEnv(["SCAN_REPORT=${env.REPORT_DIR}/${reportName}"]) {
         sh """
             rc=0
-            trivy ${args} --cache-dir .trivy-cache --exit-code 1 --output "\$TRIVY_REPORT" || rc=\$?
-            [ -f "\$TRIVY_REPORT" ] && cat "\$TRIVY_REPORT"
+            trivy ${args} --cache-dir .trivy-cache --exit-code 1 --output "\$SCAN_REPORT" || rc=\$?
+            [ -f "\$SCAN_REPORT" ] && cat "\$SCAN_REPORT"
             exit \$rc
         """
     }
