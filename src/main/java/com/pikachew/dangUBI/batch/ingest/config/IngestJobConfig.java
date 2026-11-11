@@ -1,5 +1,11 @@
 package com.pikachew.dangUBI.batch.ingest.config;
 
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.CHUNK_SIZE_PROPERTY;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.JOB_NAME;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.RERUN;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.STEP_NAME;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.TARGET_DATE;
+
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.job.parameters.DefaultJobParametersValidator;
@@ -26,11 +32,6 @@ import com.pikachew.dangUBI.batch.ingest.writer.IngestFileWriter;
 @Configuration
 public class IngestJobConfig {
 
-	public static final String JOB_NAME = "ingestJob";
-	public static final String STEP_NAME = "ingestFileStep";
-	public static final String TARGET_DATE = "targetDate";
-	public static final String RERUN = "rerun";
-
 	@Bean(JOB_NAME)
 	public Job ingestJob(JobRepository jobRepository, Step ingestFileStep) {
 		return new JobBuilder(JOB_NAME, jobRepository)
@@ -42,7 +43,7 @@ public class IngestJobConfig {
 	@Bean(STEP_NAME)
 	public Step ingestFileStep(JobRepository jobRepository, PlatformTransactionManager transactionManager,
 			IngestFileReader ingestFileReader, IngestFileProcessor ingestFileProcessor,
-			IngestFileWriter ingestFileWriter, @Value("${ubi.batch.ingest.chunk-size}") int chunkSize) {
+			IngestFileWriter ingestFileWriter, @Value(CHUNK_SIZE_PROPERTY) int chunkSize) {
 		return new StepBuilder(STEP_NAME, jobRepository)
 				.<String, ParsedTelemetryFile>chunk(chunkSize)
 				.transactionManager(transactionManager)

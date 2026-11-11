@@ -1,6 +1,7 @@
 package com.pikachew.dangUBI.batch.ingest.reader;
 
 import static com.pikachew.dangUBI.common.consts.IngestStaticValues.READER_LAST_KEY;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.TARGET_DATE_EXPRESSION;
 
 import java.time.LocalDate;
 import java.util.Iterator;
@@ -33,7 +34,7 @@ public class IngestFileReader implements ItemStreamReader<String> {
 	private String lastKey;
 
 	public IngestFileReader(TelemetryFileReader telemetryFileReader,
-			@Value("#{jobParameters['targetDate']}") String targetDate) {
+			@Value(TARGET_DATE_EXPRESSION) String targetDate) {
 		this.telemetryFileReader = telemetryFileReader;
 		this.targetDate = LocalDate.parse(targetDate);
 	}

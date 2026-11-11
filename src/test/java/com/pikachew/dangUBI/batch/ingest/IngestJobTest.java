@@ -29,9 +29,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import com.pikachew.dangUBI.batch.ingest.config.IngestJobConfig;
 import com.pikachew.dangUBI.batch.ingest.dto.ParsedTelemetryFile;
 import com.pikachew.dangUBI.batch.ingest.port.TelemetryFileReader;
+import com.pikachew.dangUBI.common.consts.IngestStaticValues;
 import com.pikachew.dangUBI.common.exception.ErrorStatus;
 import com.pikachew.dangUBI.common.exception.GeneralException;
 import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
@@ -87,7 +87,7 @@ class IngestJobTest {
 
 		assertThat(execution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 		StepExecution step = execution.getStepExecutions().iterator().next();
-		assertThat(step.getStepName()).isEqualTo(IngestJobConfig.STEP_NAME);
+		assertThat(step.getStepName()).isEqualTo(IngestStaticValues.STEP_NAME);
 		assertThat(step.getReadCount()).isEqualTo(2);
 		assertThat(step.getWriteCount()).isEqualTo(2);
 		assertThat(microtripRepository.count()).isEqualTo(1);
@@ -101,7 +101,7 @@ class IngestJobTest {
 		jobOperatorTestUtils.startJob(params(DATE));
 
 		JobExecution rerun = jobOperatorTestUtils.startJob(new JobParametersBuilder(params(DATE))
-				.addLong(IngestJobConfig.RERUN, 2L)
+				.addLong(IngestStaticValues.RERUN, 2L)
 				.toJobParameters());
 
 		assertThat(rerun.getStatus()).isEqualTo(BatchStatus.COMPLETED);
@@ -185,7 +185,7 @@ class IngestJobTest {
 	}
 
 	private static JobParameters params(String targetDate) {
-		return new JobParametersBuilder().addString(IngestJobConfig.TARGET_DATE, targetDate).toJobParameters();
+		return new JobParametersBuilder().addString(IngestStaticValues.TARGET_DATE, targetDate).toJobParameters();
 	}
 
 }
