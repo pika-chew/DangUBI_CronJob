@@ -1,25 +1,21 @@
 package com.pikachew.dangUBI.common.exception;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-/** 기능별 Handler 예외의 부모. 메시지는 "{에러 코드 메시지}: {상세}" 형태다. */
 @Getter
+@AllArgsConstructor
 public class GeneralException extends RuntimeException {
 
-	private final BaseErrorCode errorCode;
+	private BaseErrorCode code;
 
-	public GeneralException(BaseErrorCode errorCode) {
-		super(errorCode.getMessage());
-		this.errorCode = errorCode;
+	@Override
+	public String getMessage() {
+		return code.getReason().getMessage();
 	}
 
-	public GeneralException(BaseErrorCode errorCode, String detail) {
-		this(errorCode, detail, null);
-	}
-
-	public GeneralException(BaseErrorCode errorCode, String detail, Throwable cause) {
-		super(errorCode.getMessage() + ": " + detail, cause);
-		this.errorCode = errorCode;
+	public Reason getErrorReason() {
+		return this.code.getReason();
 	}
 
 }

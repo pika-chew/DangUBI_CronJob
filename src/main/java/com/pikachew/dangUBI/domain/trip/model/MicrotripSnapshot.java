@@ -1,13 +1,13 @@
-package com.pikachew.dangUBI.domain.telemetry.model;
+package com.pikachew.dangUBI.domain.trip.model;
 
 import java.time.Instant;
 
 /**
- * ty=4 Microtrip 메시지. 운행 중 주기적으로 온다.
+ * ty=4 Microtrip 메시지. 운행 중 주기적으로 온다. 아직 저장되지 않은 값이다.
  *
  * tid와 collectedAt(clt)을 뺀 나머지는 null을 허용한다. 측정값은 원본 Int 그대로 둔다.
  */
-public record MicrotripRecord(
+public record MicrotripSnapshot(
 		String vehicleId,
 		String idempotencyKey,
 		Instant receivedAt,
@@ -27,5 +27,5 @@ public record MicrotripRecord(
 		Integer gyroY,                  // xyz[2]
 		Integer batteryVoltage,         // vv
 		Integer accelPedalPosition      // tpos
-) implements TelemetryRecord {
+) implements TelemetrySnapshot {
 }

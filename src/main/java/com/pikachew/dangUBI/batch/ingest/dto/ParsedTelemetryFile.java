@@ -2,14 +2,14 @@ package com.pikachew.dangUBI.batch.ingest.dto;
 
 import java.util.List;
 
-import com.pikachew.dangUBI.domain.telemetry.model.MicrotripRecord;
-import com.pikachew.dangUBI.domain.telemetry.model.TripRecord;
+import com.pikachew.dangUBI.domain.trip.model.MicrotripSnapshot;
+import com.pikachew.dangUBI.domain.trip.model.TripSnapshot;
 
 /** gz 파일 하나를 해석한 결과. 해석하지 못한 줄은 건너뛰고 skippedLineCount로만 남긴다. */
 public record ParsedTelemetryFile(
 		String objectKey,
-		List<TripRecord> trips,
-		List<MicrotripRecord> microtrips,
+		List<TripSnapshot> trips,
+		List<MicrotripSnapshot> microtrips,
 		int skippedLineCount
 ) {
 

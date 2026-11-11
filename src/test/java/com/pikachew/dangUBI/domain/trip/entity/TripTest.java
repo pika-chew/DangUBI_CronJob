@@ -1,11 +1,13 @@
 package com.pikachew.dangUBI.domain.trip.entity;
 
-import static com.pikachew.dangUBI.domain.telemetry.model.TelemetryRecordFixtures.trip;
+import static com.pikachew.dangUBI.domain.trip.model.TripSnapshotFixtures.trip;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
+
+import com.pikachew.dangUBI.domain.driver.entity.Driver;
 
 /** 단위 테스트: Trip 상태 변경 규칙. */
 class TripTest {

@@ -1,19 +1,19 @@
 package com.pikachew.dangUBI.domain.trip.service;
 
-import static com.pikachew.dangUBI.domain.telemetry.model.TelemetryRecordFixtures.microtrip;
-import static com.pikachew.dangUBI.domain.telemetry.model.TelemetryRecordFixtures.trip;
+import static com.pikachew.dangUBI.domain.trip.model.TripSnapshotFixtures.microtrip;
+import static com.pikachew.dangUBI.domain.trip.model.TripSnapshotFixtures.trip;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.util.List;
 
-import com.pikachew.dangUBI.domain.telemetry.model.MicrotripRecord;
-import com.pikachew.dangUBI.domain.telemetry.model.TripRecord;
+import com.pikachew.dangUBI.domain.trip.model.MicrotripSnapshot;
+import com.pikachew.dangUBI.domain.trip.model.TripSnapshot;
 import com.pikachew.dangUBI.domain.trip.entity.Trip;
 import com.pikachew.dangUBI.domain.trip.entity.TripMicrotrip;
 import com.pikachew.dangUBI.domain.trip.entity.TripStatus;
 import com.pikachew.dangUBI.domain.trip.model.TripIngestResult;
-import com.pikachew.dangUBI.domain.trip.repository.DriverRepository;
+import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.trip.repository.TripMicrotripRepository;
 import com.pikachew.dangUBI.domain.trip.repository.TripRepository;
 import jakarta.persistence.EntityManager;
@@ -101,8 +101,8 @@ class TripDomainServiceImplTest {
 
 	@Test
 	void 같은_데이터를_다시_넣어도_결과가_같다() {
-		List<TripRecord> trips = List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000));
-		List<MicrotripRecord> microtrips = List.of(
+		List<TripSnapshot> trips = List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000));
+		List<MicrotripSnapshot> microtrips = List.of(
 				microtrip(V1, 354, "m1", "2026-11-10T10:00:00Z"),
 				microtrip(V1, 354, "m2", "2026-11-10T10:30:00Z"));
 
@@ -119,7 +119,7 @@ class TripDomainServiceImplTest {
 
 	@Test
 	void 한_번의_입력_안에서_겹치는_microtrip은_하나만_저장한다() {
-		MicrotripRecord record = microtrip(V1, 354, "m1", "2026-11-10T10:00:00Z");
+		MicrotripSnapshot record = microtrip(V1, 354, "m1", "2026-11-10T10:00:00Z");
 
 		TripIngestResult result = ingest(List.of(), List.of(record, record));
 
@@ -163,7 +163,7 @@ class TripDomainServiceImplTest {
 		assertThat(findTrip(V1, 354).getLastCollectedAt()).isEqualTo(Instant.parse("2026-11-10T23:59:59.123Z"));
 	}
 
-	private TripIngestResult ingest(List<TripRecord> trips, List<MicrotripRecord> microtrips) {
+	private TripIngestResult ingest(List<TripSnapshot> trips, List<MicrotripSnapshot> microtrips) {
 		TripIngestResult result = tripDomainService.ingest(trips, microtrips);
 		entityManager.flush();
 		entityManager.clear();

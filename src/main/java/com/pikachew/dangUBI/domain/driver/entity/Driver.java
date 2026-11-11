@@ -1,6 +1,7 @@
-package com.pikachew.dangUBI.domain.trip.entity;
+package com.pikachew.dangUBI.domain.driver.entity;
 
 import com.pikachew.dangUBI.domain.common.entity.BaseTimeEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

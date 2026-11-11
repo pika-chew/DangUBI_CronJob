@@ -2,26 +2,27 @@ package com.pikachew.dangUBI.domain.common.entity;
 
 import java.time.Instant;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import jakarta.persistence.Column;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-/** 모든 엔티티의 생성·수정 시각(UTC). */
+/**
+ * 생성·수정 시각을 갖는 엔티티의 공통 부모. trip은 적재 중에 상태가 바뀌어 수정 시각도 둔다.
+ * 시각은 UTC 기준이다.
+ */
 @Getter
 @MappedSuperclass
-@EntityListeners(AuditingEntityListener.class)
 public abstract class BaseTimeEntity {
 
-	@CreatedDate
-	@Column(nullable = false, updatable = false)
+	@CreationTimestamp
+	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
-	@LastModifiedDate
-	@Column(nullable = false)
+	@UpdateTimestamp
+	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
 }

@@ -1,4 +1,4 @@
-package com.pikachew.dangUBI.domain.telemetry.policy;
+package com.pikachew.dangUBI.infra.swift;
 
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.EVENT_MASK_HEX_PATTERN;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.SUPPORTED_SCHEMA_VERSION;
@@ -7,41 +7,96 @@ import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TY_TRIP;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.XYZ_DELIMITER;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.XYZ_SIZE;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.zip.GZIPInputStream;
 
+import com.pikachew.dangUBI.batch.ingest.dto.ParsedTelemetryFile;
 import com.pikachew.dangUBI.common.util.JsonNodeUtils;
-import com.pikachew.dangUBI.domain.telemetry.exception.TelemetryHandler;
-import com.pikachew.dangUBI.domain.telemetry.model.MicrotripRecord;
-import com.pikachew.dangUBI.domain.telemetry.model.TelemetryRecord;
-import com.pikachew.dangUBI.domain.telemetry.model.TripRecord;
+import com.pikachew.dangUBI.domain.trip.model.MicrotripSnapshot;
+import com.pikachew.dangUBI.domain.trip.model.TelemetrySnapshot;
+import com.pikachew.dangUBI.domain.trip.model.TripSnapshot;
+
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 수집 메시지(JSONL 한 줄)를 {@link TelemetryRecord}로 해석하는 규칙 (docs/ingest-spec.md 6장).
+ * gz로 압축된 JSONL 수집 파일을 trip·microtrip으로 해석한다 (docs/ingest-spec.md 5·6장).
  *
- * - 키 필드(vehicleId, idempotencyKey, ty, schemaVersion, pld.tid, microtrip의 pld.clt)가 없거나 형식이 틀리면
- *   {@link TelemetryHandler}를 던진다. 호출한 쪽은 그 줄을 버린다.
- * - 지원하지 않는 ty·schemaVersion도 {@link TelemetryHandler}를 던진다.
+ * 파일
+ * - 빈 줄은 건너뛰고 세지 않는다. 해석하지 못한 줄은 경고를 남기고 skippedLineCount로 센다.
+ * - gz 자체를 읽을 수 없으면 {@link TelemetryFileFormatException}을 던진다.
+ *
+ * 줄
+ * - 키 필드(vehicleId, idempotencyKey, ty, schemaVersion, pld.tid, microtrip의 pld.clt)가 없거나 형식이 틀리면 그 줄을 버린다.
+ * - 지원하지 않는 ty·schemaVersion인 줄도 버린다.
  * - 나머지 필드는 형식이 틀리면 그 필드만 null로 두고 경고 로그를 남긴다. 원본은 Swift에 남아 있다.
  * - 숫자 필드는 JSON 숫자와 숫자 문자열을 모두 받는다.
+ *
+ * TODO: 파일이 커서 메모리에 다 올리기 어려우면 레코드를 스트리밍으로 넘기는 방식으로 바꾼다.
  */
 @Slf4j
-@Component
-public class TelemetryRecordResolver {
+public final class TelemetryJsonlParser {
 
-	public TelemetryRecord resolve(String line) {
+	private TelemetryJsonlParser() {
+	}
+
+	public static ParsedTelemetryFile parse(String objectKey, InputStream gzipped) {
+		List<TripSnapshot> trips = new ArrayList<>();
+		List<MicrotripSnapshot> microtrips = new ArrayList<>();
+		int skipped = 0;
+
+		try {
+			BufferedReader reader = new BufferedReader(
+					new InputStreamReader(new GZIPInputStream(gzipped), StandardCharsets.UTF_8));
+			String line;
+			int lineNumber = 0;
+			while ((line = reader.readLine()) != null) {
+				lineNumber++;
+				if (line.isBlank()) {
+					continue;
+				}
+				try {
+					TelemetrySnapshot snapshot = parseLine(line);
+					if (snapshot instanceof TripSnapshot trip) {
+						trips.add(trip);
+					} else if (snapshot instanceof MicrotripSnapshot microtrip) {
+						microtrips.add(microtrip);
+					}
+				} catch (InvalidTelemetryLineException e) {
+					skipped++;
+					log.warn("줄을 건너뜁니다: {}:{} ({})", objectKey, lineNumber, e.getMessage());
+				}
+			}
+		} catch (IOException e) {
+			throw new TelemetryFileFormatException("gz 파일을 읽지 못했습니다: " + objectKey, e);
+		}
+
+		return new ParsedTelemetryFile(objectKey, trips, microtrips, skipped);
+	}
+
+	/**
+	 * JSONL 한 줄을 해석한다.
+	 *
+	 * @throws InvalidTelemetryLineException 줄을 버려야 할 때. 메시지에 이유가 들어간다
+	 */
+	public static TelemetrySnapshot parseLine(String line) {
 		JsonNode root;
 		try {
 			root = JsonMapper.shared().readTree(line);
 		} catch (JacksonException e) {
-			throw TelemetryHandler.INVALID_JSON;
+			throw new InvalidTelemetryLineException("JSON 형식이 아닙니다");
 		}
 		if (root == null || !root.isObject()) {
-			throw TelemetryHandler.INVALID_JSON;
+			throw new InvalidTelemetryLineException("JSON 객체가 아닙니다");
 		}
 
 		String vehicleId = requiredText(root, "vehicleId");
@@ -49,11 +104,11 @@ public class TelemetryRecordResolver {
 		int ty = requiredInt(root, "ty");
 		int schemaVersion = requiredInt(root, "schemaVersion");
 		if (schemaVersion != SUPPORTED_SCHEMA_VERSION) {
-			throw TelemetryHandler.unsupportedSchemaVersion(schemaVersion);
+			throw new InvalidTelemetryLineException("지원하지 않는 schemaVersion: " + schemaVersion);
 		}
 		JsonNode pld = root.get("pld");
 		if (pld == null || !pld.isObject()) {
-			throw TelemetryHandler.missingField("pld");
+			throw new InvalidTelemetryLineException("pld가 없습니다");
 		}
 
 		Fields fields = new Fields(idempotencyKey);
@@ -61,7 +116,7 @@ public class TelemetryRecordResolver {
 		int tid = requiredInt(pld, "tid");
 
 		return switch (ty) {
-			case TY_TRIP -> new TripRecord(vehicleId, idempotencyKey, receivedAt, tid,
+			case TY_TRIP -> new TripSnapshot(vehicleId, idempotencyKey, receivedAt, tid,
 					fields.epochMillis(pld, "stt"),
 					fields.epochMillis(pld, "edt"),
 					fields.integer(pld, "dis"),
@@ -86,7 +141,7 @@ public class TelemetryRecordResolver {
 			case TY_MICROTRIP -> {
 				Instant collectedAt = Instant.ofEpochMilli(requiredLong(pld, "clt"));
 				Integer[] xyz = fields.xyz(pld);
-				yield new MicrotripRecord(vehicleId, idempotencyKey, receivedAt, tid, collectedAt,
+				yield new MicrotripSnapshot(vehicleId, idempotencyKey, receivedAt, tid, collectedAt,
 						fields.integer(pld, "lat"),
 						fields.integer(pld, "lon"),
 						fields.integer(pld, "lc"),
@@ -100,14 +155,14 @@ public class TelemetryRecordResolver {
 						fields.integer(pld, "vv"),
 						fields.integer(pld, "tpos"));
 			}
-			default -> throw TelemetryHandler.unsupportedType(ty);
+			default -> throw new InvalidTelemetryLineException("지원하지 않는 ty: " + ty);
 		};
 	}
 
 	private static String requiredText(JsonNode parent, String name) {
 		String value = JsonNodeUtils.toNonBlankText(parent.get(name));
 		if (value == null) {
-			throw TelemetryHandler.missingField(name);
+			throw new InvalidTelemetryLineException(name + "가 없거나 문자열이 아닙니다");
 		}
 		return value;
 	}
@@ -115,7 +170,7 @@ public class TelemetryRecordResolver {
 	private static int requiredInt(JsonNode parent, String name) {
 		Integer value = JsonNodeUtils.toInteger(parent.get(name));
 		if (value == null) {
-			throw TelemetryHandler.missingField(name);
+			throw new InvalidTelemetryLineException(name + "가 없거나 정수가 아닙니다");
 		}
 		return value;
 	}
@@ -123,12 +178,12 @@ public class TelemetryRecordResolver {
 	private static long requiredLong(JsonNode parent, String name) {
 		Long value = JsonNodeUtils.toLong(parent.get(name));
 		if (value == null) {
-			throw TelemetryHandler.missingField(name);
+			throw new InvalidTelemetryLineException(name + "가 없거나 정수가 아닙니다");
 		}
 		return value;
 	}
 
-	/** 버려도 되는 필드를 읽는다. 형식이 틀리면 null로 두고 경고만 남긴다. */
+	/** 버려도 되는 필드를 읽는다. 형식이 틀리면 null로 두고 경고만 남긴다 */
 	private record Fields(String idempotencyKey) {
 
 		Integer integer(JsonNode parent, String name) {
@@ -149,7 +204,7 @@ public class TelemetryRecordResolver {
 			return value == null ? invalid(name, node) : Instant.ofEpochMilli(value);
 		}
 
-		/** em: "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다. 숫자 28로 와도 16진으로 본다. */
+		/** em: "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다. 숫자 28로 와도 16진으로 본다 */
 		Integer eventMask(JsonNode parent) {
 			JsonNode node = parent.get("em");
 			if (JsonNodeUtils.isAbsent(node)) {
@@ -163,7 +218,7 @@ public class TelemetryRecordResolver {
 			return Integer.parseInt(text, 16);
 		}
 
-		/** xyz: 세 값이 모두 정수가 아니면 셋 다 null이다. */
+		/** xyz: 세 값이 모두 정수가 아니면 셋 다 null이다 */
 		Integer[] xyz(JsonNode parent) {
 			Integer[] empty = new Integer[XYZ_SIZE];
 			JsonNode node = parent.get("xyz");

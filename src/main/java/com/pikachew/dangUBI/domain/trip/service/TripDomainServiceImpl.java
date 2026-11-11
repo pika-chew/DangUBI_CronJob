@@ -10,60 +10,71 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import com.pikachew.dangUBI.common.annotation.DomainService;
-import com.pikachew.dangUBI.domain.telemetry.model.MicrotripRecord;
-import com.pikachew.dangUBI.domain.telemetry.model.TripRecord;
-import com.pikachew.dangUBI.domain.trip.entity.Driver;
+import com.pikachew.dangUBI.domain.driver.service.DriverDomainService;
 import com.pikachew.dangUBI.domain.trip.entity.Trip;
 import com.pikachew.dangUBI.domain.trip.entity.TripMicrotrip;
+import com.pikachew.dangUBI.domain.trip.model.MicrotripSnapshot;
 import com.pikachew.dangUBI.domain.trip.model.TripIngestResult;
-import com.pikachew.dangUBI.domain.trip.repository.DriverRepository;
+import com.pikachew.dangUBI.domain.trip.model.TripSnapshot;
 import com.pikachew.dangUBI.domain.trip.repository.TripMicrotripRepository;
 import com.pikachew.dangUBI.domain.trip.repository.TripRepository;
+
 import lombok.RequiredArgsConstructor;
 
 /**
  * trip 적재 (docs/ingest-spec.md 6장 "trip 정제").
  *
- * - trip은 (vehicleId, tid)로 찾고, 없으면 진행 중 상태로 만든다. 운전자도 없으면 만든다.
+ * - trip은 (vehicleId, tid)로 찾고, 없으면 진행 중 상태로 만든다. 운전자는 {@link DriverDomainService}로 찾거나 만든다.
  * - microtrip은 idempotencyKey로 이미 저장된 것과 입력 안의 중복을 걸러 새 것만 저장하고, trip의 수집 범위를 넓힌다.
  * - ty=3은 trip을 종료하고 요약값을 채운다.
  *
  * TODO: 두 실행이 같은 trip을 동시에 처음 만들면 유니크 충돌로 chunk가 실패한다. 지금은 CronJob 동시 실행 금지로 막는다.
  * TODO: microtrip이 많아 IDENTITY 단건 insert가 느리면 JDBC batch insert로 바꾼다.
  */
+@Transactional
 @DomainService
 @RequiredArgsConstructor
 public class TripDomainServiceImpl implements TripDomainService {
 
-	private final DriverRepository driverRepository;
+	private final DriverDomainService driverDomainService;
 	private final TripRepository tripRepository;
 	private final TripMicrotripRepository microtripRepository;
 
 	@Override
-	public TripIngestResult ingest(List<TripRecord> trips, List<MicrotripRecord> microtrips) {
-		TripFinder tripFinder = new TripFinder();
+	public TripIngestResult ingest(List<TripSnapshot> trips, List<MicrotripSnapshot> microtrips) {
+		Map<TripKey, Trip> tripCache = new HashMap<>();
 
-		Map<String, MicrotripRecord> uniqueMicrotrips = new LinkedHashMap<>();
-		microtrips.forEach(record -> uniqueMicrotrips.putIfAbsent(record.idempotencyKey(), record));
+		Map<String, MicrotripSnapshot> uniqueMicrotrips = new LinkedHashMap<>();
+		microtrips.forEach(snapshot -> uniqueMicrotrips.putIfAbsent(snapshot.idempotencyKey(), snapshot));
 		Set<String> existingKeys = findExistingKeys(new ArrayList<>(uniqueMicrotrips.keySet()));
 
 		List<TripMicrotrip> newMicrotrips = new ArrayList<>();
-		for (MicrotripRecord record : uniqueMicrotrips.values()) {
-			if (existingKeys.contains(record.idempotencyKey())) {
+		for (MicrotripSnapshot snapshot : uniqueMicrotrips.values()) {
+			if (existingKeys.contains(snapshot.idempotencyKey())) {
 				continue;
 			}
-			Trip trip = tripFinder.findOrStart(record.vehicleId(), record.tid());
-			trip.recordCollectedAt(record.collectedAt());
-			newMicrotrips.add(TripMicrotrip.of(trip, record));
+			Trip trip = findOrStart(tripCache, snapshot.vehicleId(), snapshot.tid());
+			trip.recordCollectedAt(snapshot.collectedAt());
+			newMicrotrips.add(TripMicrotrip.of(trip, snapshot));
 		}
 		microtripRepository.saveAll(newMicrotrips);
 
-		for (TripRecord record : trips) {
-			tripFinder.findOrStart(record.vehicleId(), record.tid()).complete(record);
+		for (TripSnapshot snapshot : trips) {
+			findOrStart(tripCache, snapshot.vehicleId(), snapshot.tid()).complete(snapshot);
 		}
 
 		return new TripIngestResult(trips.size(), newMicrotrips.size(), microtrips.size() - newMicrotrips.size());
+	}
+
+	/** 한 번의 ingest 안에서는 같은 trip을 다시 조회하지 않도록 담아 둔다 */
+	private Trip findOrStart(Map<TripKey, Trip> cache, String vehicleId, int tid) {
+		return cache.computeIfAbsent(new TripKey(vehicleId, tid), key ->
+				tripRepository.findByVehicleIdAndTid(vehicleId, tid)
+						.orElseGet(() -> tripRepository.save(
+								Trip.start(driverDomainService.getOrCreate(vehicleId), vehicleId, tid))));
 	}
 
 	private Set<String> findExistingKeys(List<String> keys) {
@@ -75,24 +86,7 @@ public class TripDomainServiceImpl implements TripDomainService {
 		return existing;
 	}
 
-	/** 한 번의 ingest 안에서 같은 trip·운전자를 다시 조회하지 않도록 담아 둔다. */
-	private class TripFinder {
-
-		private final Map<String, Driver> drivers = new HashMap<>();
-		private final Map<String, Trip> trips = new HashMap<>();
-
-		Trip findOrStart(String vehicleId, int tid) {
-			return trips.computeIfAbsent(vehicleId + "#" + tid, key ->
-					tripRepository.findByVehicleIdAndTid(vehicleId, tid)
-							.orElseGet(() -> tripRepository.save(Trip.start(findOrCreateDriver(vehicleId), vehicleId, tid))));
-		}
-
-		private Driver findOrCreateDriver(String vehicleId) {
-			return drivers.computeIfAbsent(vehicleId, key ->
-					driverRepository.findByVehicleId(vehicleId)
-							.orElseGet(() -> driverRepository.save(Driver.ofVehicle(vehicleId))));
-		}
-
+	private record TripKey(String vehicleId, int tid) {
 	}
 
 }

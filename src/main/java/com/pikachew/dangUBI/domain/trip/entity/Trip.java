@@ -3,7 +3,9 @@ package com.pikachew.dangUBI.domain.trip.entity;
 import java.time.Instant;
 
 import com.pikachew.dangUBI.domain.common.entity.BaseTimeEntity;
-import com.pikachew.dangUBI.domain.telemetry.model.TripRecord;
+import com.pikachew.dangUBI.domain.driver.entity.Driver;
+import com.pikachew.dangUBI.domain.trip.model.TripSnapshot;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -87,12 +89,12 @@ public class Trip extends BaseTimeEntity {
 		this.status = TripStatus.IN_PROGRESS;
 	}
 
-	/** 처음 본 trip을 진행 중 상태로 만든다. ty=3이 먼저 오면 바로 {@link #complete}가 이어진다. */
+	/** 처음 본 trip을 진행 중 상태로 만든다. ty=3이 먼저 오면 바로 {@link #complete}가 이어진다 */
 	public static Trip start(Driver driver, String vehicleId, int tid) {
 		return new Trip(driver, vehicleId, tid);
 	}
 
-	/** microtrip 수집 시각으로 수집 범위를 넓힌다. 순서와 상관없이 최솟값·최댓값만 남는다. */
+	/** microtrip 수집 시각으로 수집 범위를 넓힌다. 순서와 상관없이 최솟값·최댓값만 남는다 */
 	public void recordCollectedAt(Instant collectedAt) {
 		if (firstCollectedAt == null || collectedAt.isBefore(firstCollectedAt)) {
 			firstCollectedAt = collectedAt;
@@ -102,32 +104,32 @@ public class Trip extends BaseTimeEntity {
 		}
 	}
 
-	/** ty=3 요약값을 채우고 종료한다. 같은 메시지를 다시 받아도 같은 값으로 덮어쓸 뿐이다. */
-	public void complete(TripRecord record) {
+	/** ty=3 요약값을 채우고 종료한다. 같은 메시지를 다시 받아도 같은 값으로 덮어쓸 뿐이다 */
+	public void complete(TripSnapshot snapshot) {
 		this.status = TripStatus.COMPLETED;
-		this.startedAt = record.startedAt();
-		this.endedAt = record.endedAt();
-		this.distance = record.distance();
-		this.totalDistance = record.totalDistance();
-		this.fuelConsumption = record.fuelConsumption();
-		this.startLat = record.startLat();
-		this.startLon = record.startLon();
-		this.endLat = record.endLat();
-		this.endLon = record.endLon();
-		this.coolantTempAvg = record.coolantTempAvg();
-		this.carbonEmission = record.carbonEmission();
-		this.fuelCutTime = record.fuelCutTime();
-		this.maxSpeed = record.maxSpeed();
-		this.avgSpeed = record.avgSpeed();
-		this.idleTime = record.idleTime();
-		this.batteryVoltage = record.batteryVoltage();
-		this.generatorVoltage = record.generatorVoltage();
-		this.warmupTime = record.warmupTime();
-		this.highSpeedTime = record.highSpeedTime();
-		this.firmwareVersion = record.firmwareVersion();
-		this.drivingTime = record.drivingTime();
-		this.tripIdempotencyKey = record.idempotencyKey();
-		this.tripReceivedAt = record.receivedAt();
+		this.startedAt = snapshot.startedAt();
+		this.endedAt = snapshot.endedAt();
+		this.distance = snapshot.distance();
+		this.totalDistance = snapshot.totalDistance();
+		this.fuelConsumption = snapshot.fuelConsumption();
+		this.startLat = snapshot.startLat();
+		this.startLon = snapshot.startLon();
+		this.endLat = snapshot.endLat();
+		this.endLon = snapshot.endLon();
+		this.coolantTempAvg = snapshot.coolantTempAvg();
+		this.carbonEmission = snapshot.carbonEmission();
+		this.fuelCutTime = snapshot.fuelCutTime();
+		this.maxSpeed = snapshot.maxSpeed();
+		this.avgSpeed = snapshot.avgSpeed();
+		this.idleTime = snapshot.idleTime();
+		this.batteryVoltage = snapshot.batteryVoltage();
+		this.generatorVoltage = snapshot.generatorVoltage();
+		this.warmupTime = snapshot.warmupTime();
+		this.highSpeedTime = snapshot.highSpeedTime();
+		this.firmwareVersion = snapshot.firmwareVersion();
+		this.drivingTime = snapshot.drivingTime();
+		this.tripIdempotencyKey = snapshot.idempotencyKey();
+		this.tripReceivedAt = snapshot.receivedAt();
 	}
 
 }
