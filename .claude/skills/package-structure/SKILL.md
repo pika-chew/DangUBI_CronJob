@@ -95,7 +95,7 @@ common/
 
 | 종류 | 위치 | 이름 | 규칙 |
 | --- | --- | --- | --- |
-| Job 설정 | `batch/{job}/config` | `{Job}JobConfig` | `@Configuration`. Job 이름을 `public static final String JOB_NAME`으로 두고, Job 빈은 `{job}Job`, Step 빈은 `{job}{Name}Step`으로 짓는다 |
+| Job 설정 | `batch/{job}/config` | `{Job}JobConfig` | `@Configuration`. Job 빈은 `{job}Job`, Step 빈은 `{job}{Name}Step`으로 짓는다. Job·Step 이름, 파라미터 키, `@Value` 표현식·설정 키는 Config 안에 두지 않고 `common/consts/{Job}StaticValues`에 둔다 |
 | Reader | `batch/{job}/reader` | `{Name}Reader` | 조회 전용. 대량 조회는 페이징·커서 Reader를 쓰고, 단건 조회는 `Adaptor`를 쓴다 |
 | Processor | `batch/{job}/processor` | `{Name}Processor` | 변환·필터링만 한다. 저장하지 않는다. 걸러낼 항목은 `null`을 반환한다. 포트에서 올라온 인프라 예외는 여기서 `ErrorStatus`로 바꿔 던진다 |
 | 포트 | `batch/{job}/port` | 역할 이름 (예: `TelemetryFileReader`) | 외부 데이터를 도메인 모델(`Snapshot`)이나 Step 중간 데이터로 돌려준다. 저장 경로·파일 형식을 드러내지 않는다 |
@@ -118,8 +118,8 @@ common/
 - `batch`가 외부 시스템을 호출해야 하면 `batch/{job}/port`에 인터페이스를 두고 구현체는 `infra/{system}`에 둔다. 외부 파일·메시지의 형식(gz, JSONL, CSV, 필드 이름)과 저장 경로 규칙은 infra가 안다.
 - import 순서: static → `java` → `org` → `com.pikachew` → `jakarta`·`lombok`·기타, 그룹 사이 빈 줄.
 - `@Service` 대신 `common/annotation`의 `@Adaptor`, `@DomainService`, `@Validator`를 쓴다. 이 어노테이션들이 아직 없으면 처음 필요한 시점에 `common/annotation`에 만든다.
-- Job·Step 이름 문자열은 `JobConfig`의 상수로만 참조하고, 다른 곳에 하드코딩하지 않는다.
-- 고정값(경로 prefix, 날짜 포맷, 정규식, 메시지 타입 코드 등)은 클래스 안에 `private static final`로 두지 않고 `common/consts/{Name}StaticValues`에 `public static final`로 모은다. 쓰는 쪽은 static import한다.
+- Job·Step 이름, Job 파라미터 키는 `common/consts/{Job}StaticValues`의 상수로만 참조하고, 다른 곳에 하드코딩하지 않는다.
+- 고정값(경로 prefix, 날짜 포맷, 정규식, 메시지 타입 코드, Job·Step 이름, 파라미터 키, `@Value`의 `#{jobParameters[...]}`·`${...}` 문자열 등)은 어느 클래스에서든 클래스 안에 `static final`로 두지 않고 `common/consts/{Name}StaticValues`에 `public static final`로 모은다. 쓰는 쪽은 static import한다.
 - 특정 기능에 묶이지 않는 함수(JSON 값 꺼내기 등)는 `common/util/{Name}Utils`에 static 메서드로 둔다. 상수 클래스와 Utils 클래스는 `final`이고 생성자는 private이다. Utils에도 단위 테스트를 쓴다.
 - 기능 예외를 던지는 검증처럼 특정 도메인 규칙이 들어간 함수는 Utils로 빼지 않고 그 도메인 클래스에 둔다.
 
