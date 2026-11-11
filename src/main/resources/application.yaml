@@ -16,4 +16,12 @@ spring:
   # 접속 정보는 환경 변수로 받는다: SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD
   jpa:
     hibernate:
+      # 업무 테이블은 db/trip-schema-mysql.sql로 만든다. 운영은 배포 전에 직접 실행한다.
       ddl-auto: none
+    properties:
+      hibernate:
+        # 시각은 UTC로 저장한다. Instant는 타임존 없는 DATETIME 컬럼에 UTC 값으로 들어간다.
+        jdbc:
+          time_zone: UTC
+        type:
+          preferred_instant_jdbc_type: TIMESTAMP

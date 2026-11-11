@@ -11,3 +11,12 @@ spring:
     jdbc:
       # 메타 테이블(BATCH_*)을 H2에 만든다. Boot가 H2용 스키마 스크립트를 고른다.
       initialize-schema: always
+  sql:
+    init:
+      # 운영과 같은 DDL로 업무 테이블을 만든다.
+      mode: always
+      schema-locations: classpath:db/trip-schema-mysql.sql
+  jpa:
+    hibernate:
+      # 엔티티와 DDL이 어긋나면 컨텍스트가 뜨지 않게 한다.
+      ddl-auto: validate
