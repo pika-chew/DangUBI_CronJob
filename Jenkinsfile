@@ -67,6 +67,10 @@ pipeline {
         // main 빌드(배포 이미지에 들어갈 jar)에 섞이지 않도록 한다
         GRADLE_CACHE    = "${env.BRANCH_NAME == 'main' ? 'ci-gradle-cache-cronjob-main' : 'ci-gradle-cache-cronjob-ci'}"
 
+        // 도구 컨테이너용 네트워크 (MTU 1450). 기본 브리지(MTU 1500)는 VM NIC(1450)보다 커서
+        // 외부 HTTPS 핸드셰이크가 멈춘다 (Gradle 배포판·의존성, Trivy DB 다운로드가 timeout)
+        CI_NETWORK      = 'ci-net-mtu1450'
+
         SLACK_CHANNEL   = '#jenkins'
         REPORT_DIR      = 'reports'
 
@@ -102,6 +106,13 @@ pipeline {
                             currentBuild.description = "${env.BUILD_KIND} (${env.IMAGE_TAG})"
                         }
                         sh 'mkdir -p "$REPORT_DIR"'
+
+                        // 이미 있으면 그대로 쓰고, 다른 빌드가 동시에 만들어도 통과
+                        sh '''
+                            docker network inspect "$CI_NETWORK" > /dev/null 2>&1 \
+                                || docker network create --opt com.docker.network.driver.mtu=1450 "$CI_NETWORK" > /dev/null \
+                                || docker network inspect "$CI_NETWORK" > /dev/null
+                        '''
 
                         // Gradle 캐시 볼륨 (Gradle 배포판·의존성을 빌드마다 다시 받지 않도록 공유)
                         // 새 볼륨은 root 소유라 빌드 컨테이너(jenkins 사용자)가 쓸 수 있게 소유자를 맞춘다
@@ -289,8 +300,9 @@ pipeline {
 // ───────────────────────── helpers ─────────────────────────
 
 // 이미지의 ENTRYPOINT(trivy, gitleaks 등)를 비우고 셸로 실행한다. HOME은 jenkins 사용자가 쓸 수 있는 곳으로 둔다.
+// 외부 다운로드가 멈추지 않도록 MTU 1450 네트워크(CI_NETWORK, Prepare에서 생성)로 띄운다.
 def inContainer(String image, String args = '', Closure body) {
-    docker.image(image).inside("--entrypoint= -e HOME=/tmp ${args}") { body() }
+    docker.image(image).inside("--entrypoint= -e HOME=/tmp --network ${env.CI_NETWORK} ${args}") { body() }
 }
 
 // 호스트 Docker 데몬을 쓰는 컨테이너 인자 (docker.sock 그룹 권한 포함)
