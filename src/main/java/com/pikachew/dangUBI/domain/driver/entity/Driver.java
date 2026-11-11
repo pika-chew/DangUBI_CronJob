@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -28,12 +29,9 @@ public class Driver extends BaseTimeEntity {
 	@Column(nullable = false, unique = true, length = 64)
 	private String vehicleId;
 
+	@Builder
 	private Driver(String vehicleId) {
 		this.vehicleId = vehicleId;
-	}
-
-	public static Driver ofVehicle(String vehicleId) {
-		return new Driver(vehicleId);
 	}
 
 }

@@ -58,7 +58,7 @@ public class TripDomainServiceImpl implements TripDomainService {
 			}
 			Trip trip = findOrStart(tripCache, snapshot.vehicleId(), snapshot.tid());
 			trip.recordCollectedAt(snapshot.collectedAt());
-			newMicrotrips.add(TripMicrotrip.of(trip, snapshot));
+			newMicrotrips.add(toMicrotrip(trip, snapshot));
 		}
 		microtripRepository.saveAll(newMicrotrips);
 
@@ -73,8 +73,34 @@ public class TripDomainServiceImpl implements TripDomainService {
 	private Trip findOrStart(Map<TripKey, Trip> cache, String vehicleId, int tid) {
 		return cache.computeIfAbsent(new TripKey(vehicleId, tid), key ->
 				tripRepository.findByVehicleIdAndTid(vehicleId, tid)
-						.orElseGet(() -> tripRepository.save(
-								Trip.start(driverDomainService.getOrCreate(vehicleId), vehicleId, tid))));
+						.orElseGet(() -> tripRepository.save(Trip.builder()
+								.driver(driverDomainService.getOrCreate(vehicleId))
+								.vehicleId(vehicleId)
+								.tid(tid)
+								.build())));
+	}
+
+	private static TripMicrotrip toMicrotrip(Trip trip, MicrotripSnapshot snapshot) {
+		return TripMicrotrip.builder()
+				.trip(trip)
+				.idempotencyKey(snapshot.idempotencyKey())
+				.collectedAt(snapshot.collectedAt())
+				.receivedAt(snapshot.receivedAt())
+				.lat(snapshot.lat())
+				.lon(snapshot.lon())
+				.locationAccuracy(snapshot.locationAccuracy())
+				.fuelConsumption(snapshot.fuelConsumption())
+				.tripDistance(snapshot.tripDistance())
+				.rpm(snapshot.rpm())
+				.speed(snapshot.speed())
+				.eventMask(snapshot.eventMask() == null ? null : snapshot.eventMask().shortValue())
+				.engineLoad(snapshot.engineLoad())
+				.accX(snapshot.accX())
+				.accY(snapshot.accY())
+				.gyroY(snapshot.gyroY())
+				.batteryVoltage(snapshot.batteryVoltage())
+				.accelPedalPosition(snapshot.accelPedalPosition())
+				.build();
 	}
 
 	private Set<String> findExistingKeys(List<String> keys) {

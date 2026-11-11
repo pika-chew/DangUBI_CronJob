@@ -18,7 +18,9 @@ public class DriverDomainServiceImpl implements DriverDomainService {
 	@Override
 	public Driver getOrCreate(String vehicleId) {
 		return driverRepository.findByVehicleId(vehicleId)
-				.orElseGet(() -> driverRepository.save(Driver.ofVehicle(vehicleId)));
+				.orElseGet(() -> driverRepository.save(Driver.builder()
+						.vehicleId(vehicleId)
+						.build()));
 	}
 
 }

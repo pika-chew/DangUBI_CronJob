@@ -101,7 +101,7 @@ common/
 | Writer | `batch/{job}/writer` | `{Name}Writer` | 저장·변경은 `DomainService`에 위임한다 |
 | Tasklet | `batch/{job}/tasklet` | `{Name}Tasklet` | chunk로 나눌 필요 없는 단일 작업(정리, 집계, 알림 등)에만 쓴다 |
 | 스케줄러 | `batch/{job}/scheduler` | `{Job}JobScheduler` | 앱 안에서 cron으로 실행할 때만 만든다. Job 실행만 하고 로직은 두지 않는다. cron 표현식은 `application.yaml`에서 주입받는다 |
-| 엔티티 | `domain/{feature}/entity` | 명사 | `BaseTimeEntity` 상속(생성·수정 시각은 Hibernate `@CreationTimestamp`·`@UpdateTimestamp`). 상태 변경은 setter 대신 의도가 드러나는 메서드로 한다 |
+| 엔티티 | `domain/{feature}/entity` | 명사 | `BaseTimeEntity` 상속(생성·수정 시각은 Hibernate `@CreationTimestamp`·`@UpdateTimestamp`). 생성은 private 생성자에 `@Builder`를 붙여 builder로만 한다. 정적 생성 메서드(`of`, `start` 등)나 public 생성자를 두지 않고, 기본 생성자는 `@NoArgsConstructor(access = PROTECTED)`. 외부 값(Snapshot)을 엔티티로 옮기는 일은 DomainService에서 builder로 한다. 상태 변경은 setter 대신 의도가 드러나는 메서드로 한다 |
 | 모델 | `domain/{feature}/model` | `{Name}Snapshot`, `{Name}Result` | record. 외부에서 읽은 저장 전 값은 `Snapshot`, DomainService 처리 결과는 `Result` |
 | 리포지토리 | `domain/{feature}/repository` | `{Entity}Repository` | `JpaRepository` 상속 인터페이스 |
 | Adaptor | `domain/{feature}/adaptor` | `{Entity}Adaptor` + `Impl` | `@Adaptor`. 조회 전용이고 메서드는 `query...`로 시작한다. 없으면 `{Feature}Handler`의 예외를 던진다 |

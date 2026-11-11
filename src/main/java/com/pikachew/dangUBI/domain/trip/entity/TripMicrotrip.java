@@ -3,7 +3,6 @@ package com.pikachew.dangUBI.domain.trip.entity;
 import java.time.Instant;
 
 import com.pikachew.dangUBI.domain.common.entity.BaseTimeEntity;
-import com.pikachew.dangUBI.domain.trip.model.MicrotripSnapshot;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -57,27 +57,29 @@ public class TripMicrotrip extends BaseTimeEntity {
 	private Integer batteryVoltage;
 	private Integer accelPedalPosition;
 
-	public static TripMicrotrip of(Trip trip, MicrotripSnapshot snapshot) {
-		TripMicrotrip microtrip = new TripMicrotrip();
-		microtrip.trip = trip;
-		microtrip.idempotencyKey = snapshot.idempotencyKey();
-		microtrip.collectedAt = snapshot.collectedAt();
-		microtrip.receivedAt = snapshot.receivedAt();
-		microtrip.lat = snapshot.lat();
-		microtrip.lon = snapshot.lon();
-		microtrip.locationAccuracy = snapshot.locationAccuracy();
-		microtrip.fuelConsumption = snapshot.fuelConsumption();
-		microtrip.tripDistance = snapshot.tripDistance();
-		microtrip.rpm = snapshot.rpm();
-		microtrip.speed = snapshot.speed();
-		microtrip.eventMask = snapshot.eventMask() == null ? null : snapshot.eventMask().shortValue();
-		microtrip.engineLoad = snapshot.engineLoad();
-		microtrip.accX = snapshot.accX();
-		microtrip.accY = snapshot.accY();
-		microtrip.gyroY = snapshot.gyroY();
-		microtrip.batteryVoltage = snapshot.batteryVoltage();
-		microtrip.accelPedalPosition = snapshot.accelPedalPosition();
-		return microtrip;
+	@Builder
+	private TripMicrotrip(Trip trip, String idempotencyKey, Instant collectedAt, Instant receivedAt,
+			Integer lat, Integer lon, Integer locationAccuracy, Integer fuelConsumption, Integer tripDistance,
+			Integer rpm, Integer speed, Short eventMask, Integer engineLoad, Integer accX, Integer accY, Integer gyroY,
+			Integer batteryVoltage, Integer accelPedalPosition) {
+		this.trip = trip;
+		this.idempotencyKey = idempotencyKey;
+		this.collectedAt = collectedAt;
+		this.receivedAt = receivedAt;
+		this.lat = lat;
+		this.lon = lon;
+		this.locationAccuracy = locationAccuracy;
+		this.fuelConsumption = fuelConsumption;
+		this.tripDistance = tripDistance;
+		this.rpm = rpm;
+		this.speed = speed;
+		this.eventMask = eventMask;
+		this.engineLoad = engineLoad;
+		this.accX = accX;
+		this.accY = accY;
+		this.gyroY = gyroY;
+		this.batteryVoltage = batteryVoltage;
+		this.accelPedalPosition = accelPedalPosition;
 	}
 
 }

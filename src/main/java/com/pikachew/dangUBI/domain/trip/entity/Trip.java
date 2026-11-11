@@ -19,6 +19,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -82,16 +83,13 @@ public class Trip extends BaseTimeEntity {
 	private String tripIdempotencyKey;
 	private Instant tripReceivedAt;
 
+	/** 처음 본 trip은 진행 중 상태로 만든다. ty=3이 먼저 오면 바로 {@link #complete}가 이어진다 */
+	@Builder
 	private Trip(Driver driver, String vehicleId, int tid) {
 		this.driver = driver;
 		this.vehicleId = vehicleId;
 		this.tid = tid;
 		this.status = TripStatus.IN_PROGRESS;
-	}
-
-	/** 처음 본 trip을 진행 중 상태로 만든다. ty=3이 먼저 오면 바로 {@link #complete}가 이어진다 */
-	public static Trip start(Driver driver, String vehicleId, int tid) {
-		return new Trip(driver, vehicleId, tid);
 	}
 
 	/** microtrip 수집 시각으로 수집 범위를 넓힌다. 순서와 상관없이 최솟값·최댓값만 남는다 */
