@@ -5,7 +5,12 @@ description: DangUBI CronJob 서버의 패키지·폴더 구조 컨벤션(batch 
 
 # 패키지 구조 컨벤션
 
-SAFORI-Server(`com.safori`)의 레이어 구조를 Spring Batch 크론잡에 맞게 바꾼 것이다. 이 프로젝트의 베이스 패키지는 `com.pikachew.dangUBI`이고, 아래 경로는 모두 `src/main/java/com/pikachew/dangUBI/` 기준이다.
+참고 프로젝트 두 개를 Spring Batch 크론잡에 맞게 바꾼 것이다. 이 프로젝트의 베이스 패키지는 `com.pikachew.dangUBI`이고, 아래 경로는 모두 `src/main/java/com/pikachew/dangUBI/` 기준이다.
+
+- 폴더 구조·도메인 구성·코드 스타일: DangCharge Producer (`/Users/hann/Project/picka-chew/DangCharge-BE/dangcharge_Producer`)
+- 예외 처리: SAFORI-Server (`/Users/hann/Project/SAFORI/SAFORI-Server`)
+
+이 문서와 참고 프로젝트 코드가 다르면 참고 프로젝트 코드가 기준이다. 두 프로젝트는 레포 밖이라 읽기 전에 사용자에게 확인받는다.
 
 HTTP 요청을 받지 않는 배치 전용 애플리케이션이므로 컨트롤러, 요청·응답 DTO, `security` 레이어는 두지 않는다. API 서버의 `api` 레이어 자리를 `batch` 레이어가 맡는다.
 
