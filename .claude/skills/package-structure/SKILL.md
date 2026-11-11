@@ -120,6 +120,7 @@ common/
 - `@Service` 대신 `common/annotation`의 `@Adaptor`, `@DomainService`, `@Validator`를 쓴다. 이 어노테이션들이 아직 없으면 처음 필요한 시점에 `common/annotation`에 만든다.
 - Job·Step 이름, Job 파라미터 키는 `common/consts/{Job}StaticValues`의 상수로만 참조하고, 다른 곳에 하드코딩하지 않는다.
 - 고정값(경로 prefix, 날짜 포맷, 정규식, 메시지 타입 코드, Job·Step 이름, 파라미터 키, `@Value`의 `#{jobParameters[...]}`·`${...}` 문자열 등)은 어느 클래스에서든 클래스 안에 `static final`로 두지 않고 `common/consts/{Name}StaticValues`에 `public static final`로 모은다. 쓰는 쪽은 static import한다.
+- 상수 이름은 static import로 쓰여도 어느 Job·기능 값인지 알 수 있게 그 Job·기능 이름으로 시작한다. `JOB_NAME`, `TARGET_DATE`, `TY_TRIP`처럼 일반적인 이름을 쓰지 않는다. 예: `INGEST_JOB_NAME`, `INGEST_FILE_STEP_NAME`, `INGEST_TARGET_DATE_PARAM`, `TELEMETRY_TY_TRIP`. Job 파라미터 키는 `_PARAM`, `@Value` 표현식은 `_EXPRESSION`, 설정 키는 `_PROPERTY`로 끝낸다.
 - 특정 기능에 묶이지 않는 함수(JSON 값 꺼내기 등)는 `common/util/{Name}Utils`에 static 메서드로 둔다. 상수 클래스와 Utils 클래스는 `final`이고 생성자는 private이다. Utils에도 단위 테스트를 쓴다.
 - 기능 예외를 던지는 검증처럼 특정 도메인 규칙이 들어간 함수는 Utils로 빼지 않고 그 도메인 클래스에 둔다.
 
