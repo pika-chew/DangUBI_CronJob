@@ -53,6 +53,7 @@ code review: rename scheduler constants
 - 제목도 커밋과 같은 `키워드: 내용` 형식으로 쓴다.
 - 본문은 [pr-template.md](pr-template.md)의 구조를 그대로 쓴다. 섹션을 지우지 말고, 해당 없는 섹션은 `없음`으로 채운다. 체크박스는 실제로 수행한 항목만 체크한다.
 - 팀 규칙상 이 템플릿은 각 레포지토리의 `.github` 폴더에도 둔다. 레포에 `.github/pull_request_template.md`가 있으면 그 파일을 우선한다.
+- PR을 만들거나 열린 PR에 푸시하면, 묻지 않고 바로 [pr-review](../pr-review/SKILL.md) 스킬대로 Codex 리뷰를 기다렸다가 검토안을 제시한다.
 
 ## 작업 진행 방식
 
