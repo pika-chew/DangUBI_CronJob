@@ -1,11 +1,11 @@
 package com.pikachew.dangUBI.infra.swift;
 
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.EVENT_MASK_HEX_PATTERN;
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.SUPPORTED_SCHEMA_VERSION;
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TY_MICROTRIP;
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TY_TRIP;
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.XYZ_DELIMITER;
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.XYZ_SIZE;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_EVENT_MASK_HEX_PATTERN;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_SUPPORTED_SCHEMA_VERSION;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_TY_MICROTRIP;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_TY_TRIP;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_XYZ_DELIMITER;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_XYZ_SIZE;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -103,7 +103,7 @@ public final class TelemetryJsonlParser {
 		String idempotencyKey = requiredText(root, "idempotencyKey");
 		int ty = requiredInt(root, "ty");
 		int schemaVersion = requiredInt(root, "schemaVersion");
-		if (schemaVersion != SUPPORTED_SCHEMA_VERSION) {
+		if (schemaVersion != TELEMETRY_SUPPORTED_SCHEMA_VERSION) {
 			throw new InvalidTelemetryLineException("지원하지 않는 schemaVersion: " + schemaVersion);
 		}
 		JsonNode pld = root.get("pld");
@@ -116,7 +116,7 @@ public final class TelemetryJsonlParser {
 		int tid = requiredInt(pld, "tid");
 
 		return switch (ty) {
-			case TY_TRIP -> new TripSnapshot(vehicleId, idempotencyKey, receivedAt, tid,
+			case TELEMETRY_TY_TRIP -> new TripSnapshot(vehicleId, idempotencyKey, receivedAt, tid,
 					fields.epochMillis(pld, "stt"),
 					fields.epochMillis(pld, "edt"),
 					fields.integer(pld, "dis"),
@@ -138,7 +138,7 @@ public final class TelemetryJsonlParser {
 					fields.integer(pld, "est"),
 					fields.integer(pld, "fwv"),
 					fields.integer(pld, "dtvt"));
-			case TY_MICROTRIP -> {
+			case TELEMETRY_TY_MICROTRIP -> {
 				Instant collectedAt = Instant.ofEpochMilli(requiredLong(pld, "clt"));
 				Integer[] xyz = fields.xyz(pld);
 				yield new MicrotripSnapshot(vehicleId, idempotencyKey, receivedAt, tid, collectedAt,
@@ -212,7 +212,7 @@ public final class TelemetryJsonlParser {
 			}
 			String text = node.isString() ? node.stringValue().trim()
 					: node.isIntegralNumber() ? node.asString() : null;
-			if (text == null || !EVENT_MASK_HEX_PATTERN.matcher(text).matches()) {
+			if (text == null || !TELEMETRY_EVENT_MASK_HEX_PATTERN.matcher(text).matches()) {
 				return invalid("em", node);
 			}
 			return Integer.parseInt(text, 16);
@@ -220,7 +220,7 @@ public final class TelemetryJsonlParser {
 
 		/** xyz: 세 값이 모두 정수가 아니면 셋 다 null이다 */
 		Integer[] xyz(JsonNode parent) {
-			Integer[] empty = new Integer[XYZ_SIZE];
+			Integer[] empty = new Integer[TELEMETRY_XYZ_SIZE];
 			JsonNode node = parent.get("xyz");
 			if (JsonNodeUtils.isAbsent(node)) {
 				return empty;
@@ -229,13 +229,13 @@ public final class TelemetryJsonlParser {
 				invalid("xyz", node);
 				return empty;
 			}
-			String[] parts = node.stringValue().split(XYZ_DELIMITER, -1);
-			if (parts.length != XYZ_SIZE) {
+			String[] parts = node.stringValue().split(TELEMETRY_XYZ_DELIMITER, -1);
+			if (parts.length != TELEMETRY_XYZ_SIZE) {
 				invalid("xyz", node);
 				return empty;
 			}
-			Integer[] values = new Integer[XYZ_SIZE];
-			for (int i = 0; i < XYZ_SIZE; i++) {
+			Integer[] values = new Integer[TELEMETRY_XYZ_SIZE];
+			for (int i = 0; i < TELEMETRY_XYZ_SIZE; i++) {
 				try {
 					values[i] = Integer.parseInt(parts[i].trim());
 				} catch (NumberFormatException e) {

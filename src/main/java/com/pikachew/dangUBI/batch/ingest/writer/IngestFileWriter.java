@@ -1,6 +1,6 @@
 package com.pikachew.dangUBI.batch.ingest.writer;
 
-import static com.pikachew.dangUBI.common.consts.IngestStaticValues.IDEMPOTENCY_KEY_QUERY_BATCH_SIZE;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_IDEMPOTENCY_KEY_QUERY_BATCH_SIZE;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -107,8 +107,8 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 
 	private Set<String> querySavedKeys(List<String> keys) {
 		Set<String> saved = new HashSet<>();
-		for (int from = 0; from < keys.size(); from += IDEMPOTENCY_KEY_QUERY_BATCH_SIZE) {
-			List<String> batch = keys.subList(from, Math.min(from + IDEMPOTENCY_KEY_QUERY_BATCH_SIZE, keys.size()));
+		for (int from = 0; from < keys.size(); from += INGEST_IDEMPOTENCY_KEY_QUERY_BATCH_SIZE) {
+			List<String> batch = keys.subList(from, Math.min(from + INGEST_IDEMPOTENCY_KEY_QUERY_BATCH_SIZE, keys.size()));
 			saved.addAll(microtripRepository.findExistingIdempotencyKeys(batch));
 		}
 		return saved;

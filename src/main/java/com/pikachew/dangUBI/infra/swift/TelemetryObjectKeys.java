@@ -1,8 +1,8 @@
 package com.pikachew.dangUBI.infra.swift;
 
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.DAY_PATH_FORMAT;
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.HOURLY_FILE_PATTERN;
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.PROCESSED_ROOT_PREFIX;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_DAY_PATH_FORMAT;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_HOURLY_FILE_PATTERN;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_PROCESSED_ROOT_PREFIX;
 
 import java.time.LocalDate;
 
@@ -18,13 +18,13 @@ public final class TelemetryObjectKeys {
 
 	/** 하루치 파일이 들어 있는 prefix. 예: firehose/processed/2026/11/10/ */
 	public static String dayPrefix(LocalDate date) {
-		return PROCESSED_ROOT_PREFIX + date.format(DAY_PATH_FORMAT);
+		return TELEMETRY_PROCESSED_ROOT_PREFIX + date.format(TELEMETRY_DAY_PATH_FORMAT);
 	}
 
 	/** 그날 적재할 파일인지. 시각 폴더(00~23) 바로 아래 .gz 파일만 받는다 */
 	public static boolean isTelemetryFile(String key, LocalDate date) {
 		String prefix = dayPrefix(date);
-		return key.startsWith(prefix) && HOURLY_FILE_PATTERN.matcher(key.substring(prefix.length())).matches();
+		return key.startsWith(prefix) && TELEMETRY_HOURLY_FILE_PATTERN.matcher(key.substring(prefix.length())).matches();
 	}
 
 }

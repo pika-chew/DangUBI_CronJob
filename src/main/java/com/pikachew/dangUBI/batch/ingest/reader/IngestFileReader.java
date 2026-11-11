@@ -1,7 +1,7 @@
 package com.pikachew.dangUBI.batch.ingest.reader;
 
-import static com.pikachew.dangUBI.common.consts.IngestStaticValues.READER_LAST_KEY;
-import static com.pikachew.dangUBI.common.consts.IngestStaticValues.TARGET_DATE_EXPRESSION;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_READER_LAST_KEY;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_TARGET_DATE_EXPRESSION;
 
 import java.time.LocalDate;
 import java.util.Iterator;
@@ -34,14 +34,14 @@ public class IngestFileReader implements ItemStreamReader<String> {
 	private String lastKey;
 
 	public IngestFileReader(TelemetryFileReader telemetryFileReader,
-			@Value(TARGET_DATE_EXPRESSION) String targetDate) {
+			@Value(INGEST_TARGET_DATE_EXPRESSION) String targetDate) {
 		this.telemetryFileReader = telemetryFileReader;
 		this.targetDate = LocalDate.parse(targetDate);
 	}
 
 	@Override
 	public void open(ExecutionContext executionContext) {
-		lastKey = executionContext.containsKey(READER_LAST_KEY) ? executionContext.getString(READER_LAST_KEY) : null;
+		lastKey = executionContext.containsKey(INGEST_READER_LAST_KEY) ? executionContext.getString(INGEST_READER_LAST_KEY) : null;
 		keys = telemetryFileReader.listFiles(targetDate).stream()
 				.filter(key -> lastKey == null || key.compareTo(lastKey) > 0)
 				.iterator();
@@ -60,7 +60,7 @@ public class IngestFileReader implements ItemStreamReader<String> {
 	@Override
 	public void update(ExecutionContext executionContext) {
 		if (lastKey != null) {
-			executionContext.putString(READER_LAST_KEY, lastKey);
+			executionContext.putString(INGEST_READER_LAST_KEY, lastKey);
 		}
 	}
 

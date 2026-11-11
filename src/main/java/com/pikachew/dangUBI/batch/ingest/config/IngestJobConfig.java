@@ -1,10 +1,10 @@
 package com.pikachew.dangUBI.batch.ingest.config;
 
-import static com.pikachew.dangUBI.common.consts.IngestStaticValues.CHUNK_SIZE_PROPERTY;
-import static com.pikachew.dangUBI.common.consts.IngestStaticValues.JOB_NAME;
-import static com.pikachew.dangUBI.common.consts.IngestStaticValues.RERUN;
-import static com.pikachew.dangUBI.common.consts.IngestStaticValues.STEP_NAME;
-import static com.pikachew.dangUBI.common.consts.IngestStaticValues.TARGET_DATE;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_CHUNK_SIZE_PROPERTY;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_FILE_STEP_NAME;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_JOB_NAME;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_RERUN_PARAM;
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_TARGET_DATE_PARAM;
 
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -32,19 +32,20 @@ import com.pikachew.dangUBI.batch.ingest.writer.IngestFileWriter;
 @Configuration
 public class IngestJobConfig {
 
-	@Bean(JOB_NAME)
+	@Bean(INGEST_JOB_NAME)
 	public Job ingestJob(JobRepository jobRepository, Step ingestFileStep) {
-		return new JobBuilder(JOB_NAME, jobRepository)
-				.validator(new DefaultJobParametersValidator(new String[] {TARGET_DATE}, new String[] {RERUN}))
+		return new JobBuilder(INGEST_JOB_NAME, jobRepository)
+				.validator(new DefaultJobParametersValidator(
+						new String[] {INGEST_TARGET_DATE_PARAM}, new String[] {INGEST_RERUN_PARAM}))
 				.start(ingestFileStep)
 				.build();
 	}
 
-	@Bean(STEP_NAME)
+	@Bean(INGEST_FILE_STEP_NAME)
 	public Step ingestFileStep(JobRepository jobRepository, PlatformTransactionManager transactionManager,
 			IngestFileReader ingestFileReader, IngestFileProcessor ingestFileProcessor,
-			IngestFileWriter ingestFileWriter, @Value(CHUNK_SIZE_PROPERTY) int chunkSize) {
-		return new StepBuilder(STEP_NAME, jobRepository)
+			IngestFileWriter ingestFileWriter, @Value(INGEST_CHUNK_SIZE_PROPERTY) int chunkSize) {
+		return new StepBuilder(INGEST_FILE_STEP_NAME, jobRepository)
 				.<String, ParsedTelemetryFile>chunk(chunkSize)
 				.transactionManager(transactionManager)
 				.reader(ingestFileReader)

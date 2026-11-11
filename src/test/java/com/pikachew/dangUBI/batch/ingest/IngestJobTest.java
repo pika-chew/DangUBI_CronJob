@@ -87,7 +87,7 @@ class IngestJobTest {
 
 		assertThat(execution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 		StepExecution step = execution.getStepExecutions().iterator().next();
-		assertThat(step.getStepName()).isEqualTo(IngestStaticValues.STEP_NAME);
+		assertThat(step.getStepName()).isEqualTo(IngestStaticValues.INGEST_FILE_STEP_NAME);
 		assertThat(step.getReadCount()).isEqualTo(2);
 		assertThat(step.getWriteCount()).isEqualTo(2);
 		assertThat(microtripRepository.count()).isEqualTo(1);
@@ -101,7 +101,7 @@ class IngestJobTest {
 		jobOperatorTestUtils.startJob(params(DATE));
 
 		JobExecution rerun = jobOperatorTestUtils.startJob(new JobParametersBuilder(params(DATE))
-				.addLong(IngestStaticValues.RERUN, 2L)
+				.addLong(IngestStaticValues.INGEST_RERUN_PARAM, 2L)
 				.toJobParameters());
 
 		assertThat(rerun.getStatus()).isEqualTo(BatchStatus.COMPLETED);
@@ -185,7 +185,7 @@ class IngestJobTest {
 	}
 
 	private static JobParameters params(String targetDate) {
-		return new JobParametersBuilder().addString(IngestStaticValues.TARGET_DATE, targetDate).toJobParameters();
+		return new JobParametersBuilder().addString(IngestStaticValues.INGEST_TARGET_DATE_PARAM, targetDate).toJobParameters();
 	}
 
 }

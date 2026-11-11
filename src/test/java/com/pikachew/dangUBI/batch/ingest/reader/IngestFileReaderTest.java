@@ -43,14 +43,14 @@ class IngestFileReaderTest {
 		reader.read();
 		reader.update(context);
 
-		assertThat(context.getString(IngestStaticValues.READER_LAST_KEY)).isEqualTo(A);
+		assertThat(context.getString(IngestStaticValues.INGEST_READER_LAST_KEY)).isEqualTo(A);
 	}
 
 	@Test
 	void 실행_기록에_키가_있으면_그_다음_키부터_읽는다() {
 		given(telemetryFileReader.listFiles(LocalDate.parse("2026-11-10"))).willReturn(List.of(A, B, C));
 		ExecutionContext context = new ExecutionContext();
-		context.putString(IngestStaticValues.READER_LAST_KEY, A);
+		context.putString(IngestStaticValues.INGEST_READER_LAST_KEY, A);
 
 		reader.open(context);
 
@@ -67,7 +67,7 @@ class IngestFileReaderTest {
 
 		reader.update(context);
 
-		assertThat(context.containsKey(IngestStaticValues.READER_LAST_KEY)).isFalse();
+		assertThat(context.containsKey(IngestStaticValues.INGEST_READER_LAST_KEY)).isFalse();
 	}
 
 }
