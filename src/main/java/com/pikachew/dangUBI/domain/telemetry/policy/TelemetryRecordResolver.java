@@ -1,8 +1,15 @@
 package com.pikachew.dangUBI.domain.telemetry.policy;
 
-import java.time.Instant;
-import java.util.regex.Pattern;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.EVENT_MASK_HEX_PATTERN;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.SUPPORTED_SCHEMA_VERSION;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TY_MICROTRIP;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TY_TRIP;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.XYZ_DELIMITER;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.XYZ_SIZE;
 
+import java.time.Instant;
+
+import com.pikachew.dangUBI.common.util.JsonNodeUtils;
 import com.pikachew.dangUBI.domain.telemetry.exception.TelemetryHandler;
 import com.pikachew.dangUBI.domain.telemetry.model.MicrotripRecord;
 import com.pikachew.dangUBI.domain.telemetry.model.TelemetryRecord;
@@ -14,7 +21,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 수집 메시지(JSONL 한 줄)를 {@link TelemetryRecord}로 해석하는 규칙.
+ * 수집 메시지(JSONL 한 줄)를 {@link TelemetryRecord}로 해석하는 규칙 (docs/ingest-spec.md 6장).
  *
  * - 키 필드(vehicleId, idempotencyKey, ty, schemaVersion, pld.tid, microtrip의 pld.clt)가 없거나 형식이 틀리면
  *   {@link TelemetryHandler}를 던진다. 호출한 쪽은 그 줄을 버린다.
@@ -26,18 +33,10 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class TelemetryRecordResolver {
 
-	public static final int TY_TRIP = 3;
-	public static final int TY_MICROTRIP = 4;
-	public static final int SUPPORTED_SCHEMA_VERSION = 1;
-
-	private static final Pattern EVENT_MASK_HEX = Pattern.compile("[0-9A-Fa-f]{1,2}");
-
-	private final JsonMapper jsonMapper = JsonMapper.shared();
-
 	public TelemetryRecord resolve(String line) {
 		JsonNode root;
 		try {
-			root = jsonMapper.readTree(line);
+			root = JsonMapper.shared().readTree(line);
 		} catch (JacksonException e) {
 			throw TelemetryHandler.INVALID_JSON;
 		}
@@ -106,45 +105,27 @@ public class TelemetryRecordResolver {
 	}
 
 	private static String requiredText(JsonNode parent, String name) {
-		JsonNode node = parent.get(name);
-		if (node == null || !node.isString() || node.stringValue().isBlank()) {
-			throw TelemetryHandler.missingField(name);
-		}
-		return node.stringValue();
-	}
-
-	private static int requiredInt(JsonNode parent, String name) {
-		Long value = toLong(parent.get(name));
-		if (value == null || value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
-			throw TelemetryHandler.missingField(name);
-		}
-		return value.intValue();
-	}
-
-	private static long requiredLong(JsonNode parent, String name) {
-		Long value = toLong(parent.get(name));
+		String value = JsonNodeUtils.toNonBlankText(parent.get(name));
 		if (value == null) {
 			throw TelemetryHandler.missingField(name);
 		}
 		return value;
 	}
 
-	/** JSON 정수 또는 정수 문자열이면 값을, 아니면 null을 돌려준다. */
-	private static Long toLong(JsonNode node) {
-		if (node == null) {
-			return null;
+	private static int requiredInt(JsonNode parent, String name) {
+		Integer value = JsonNodeUtils.toInteger(parent.get(name));
+		if (value == null) {
+			throw TelemetryHandler.missingField(name);
 		}
-		if (node.isIntegralNumber() && node.canConvertToLong()) {
-			return node.longValue();
+		return value;
+	}
+
+	private static long requiredLong(JsonNode parent, String name) {
+		Long value = JsonNodeUtils.toLong(parent.get(name));
+		if (value == null) {
+			throw TelemetryHandler.missingField(name);
 		}
-		if (node.isString()) {
-			try {
-				return Long.parseLong(node.stringValue().trim());
-			} catch (NumberFormatException e) {
-				return null;
-			}
-		}
-		return null;
+		return value;
 	}
 
 	/** 버려도 되는 필드를 읽는다. 형식이 틀리면 null로 두고 경고만 남긴다. */
@@ -152,57 +133,54 @@ public class TelemetryRecordResolver {
 
 		Integer integer(JsonNode parent, String name) {
 			JsonNode node = parent.get(name);
-			if (node == null || node.isNull()) {
+			if (JsonNodeUtils.isAbsent(node)) {
 				return null;
 			}
-			Long value = toLong(node);
-			if (value == null || value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
-				return invalid(name, node);
-			}
-			return value.intValue();
+			Integer value = JsonNodeUtils.toInteger(node);
+			return value == null ? invalid(name, node) : value;
 		}
 
 		Instant epochMillis(JsonNode parent, String name) {
 			JsonNode node = parent.get(name);
-			if (node == null || node.isNull()) {
+			if (JsonNodeUtils.isAbsent(node)) {
 				return null;
 			}
-			Long value = toLong(node);
+			Long value = JsonNodeUtils.toLong(node);
 			return value == null ? invalid(name, node) : Instant.ofEpochMilli(value);
 		}
 
-		/** em: 한 주기의 이벤트를 16진으로 적은 값. "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다. 숫자 28로 와도 16진으로 본다. */
+		/** em: "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다. 숫자 28로 와도 16진으로 본다. */
 		Integer eventMask(JsonNode parent) {
 			JsonNode node = parent.get("em");
-			if (node == null || node.isNull()) {
+			if (JsonNodeUtils.isAbsent(node)) {
 				return null;
 			}
 			String text = node.isString() ? node.stringValue().trim()
 					: node.isIntegralNumber() ? node.asString() : null;
-			if (text == null || !EVENT_MASK_HEX.matcher(text).matches()) {
+			if (text == null || !EVENT_MASK_HEX_PATTERN.matcher(text).matches()) {
 				return invalid("em", node);
 			}
 			return Integer.parseInt(text, 16);
 		}
 
-		/** xyz: "가속도X,가속도Y,각속도Y". 세 값이 모두 정수가 아니면 셋 다 null이다. */
+		/** xyz: 세 값이 모두 정수가 아니면 셋 다 null이다. */
 		Integer[] xyz(JsonNode parent) {
-			Integer[] empty = {null, null, null};
+			Integer[] empty = new Integer[XYZ_SIZE];
 			JsonNode node = parent.get("xyz");
-			if (node == null || node.isNull()) {
+			if (JsonNodeUtils.isAbsent(node)) {
 				return empty;
 			}
 			if (!node.isString()) {
 				invalid("xyz", node);
 				return empty;
 			}
-			String[] parts = node.stringValue().split(",", -1);
-			if (parts.length != 3) {
+			String[] parts = node.stringValue().split(XYZ_DELIMITER, -1);
+			if (parts.length != XYZ_SIZE) {
 				invalid("xyz", node);
 				return empty;
 			}
-			Integer[] values = new Integer[3];
-			for (int i = 0; i < 3; i++) {
+			Integer[] values = new Integer[XYZ_SIZE];
+			for (int i = 0; i < XYZ_SIZE; i++) {
 				try {
 					values[i] = Integer.parseInt(parts[i].trim());
 				} catch (NumberFormatException e) {
