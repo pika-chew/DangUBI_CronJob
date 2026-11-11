@@ -25,3 +25,9 @@ spring:
           time_zone: UTC
         type:
           preferred_instant_jdbc_type: TIMESTAMP
+
+ubi:
+  batch:
+    ingest:
+      # chunk 하나에 담는 수집 파일 수. chunk마다 커밋된다.
+      chunk-size: 10

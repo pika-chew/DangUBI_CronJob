@@ -20,3 +20,9 @@ spring:
     hibernate:
       # 엔티티와 DDL이 어긋나면 컨텍스트가 뜨지 않게 한다.
       ddl-auto: validate
+
+ubi:
+  batch:
+    ingest:
+      # 파일 하나마다 커밋해 이어 읽기를 확인할 수 있게 한다.
+      chunk-size: 1
