@@ -129,6 +129,24 @@ class IngestFileWriterTest {
 	}
 
 	@Test
+	void 대소문자만_다른_idempotencyKey는_다른_microtrip이다() {
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+		write(List.of(), List.of(microtrip(V1, 354, "M1", TRIP_START)));
+
+		assertThat(microtripRepository.count()).isEqualTo(2);
+	}
+
+	@Test
+	void 대소문자만_다른_차량은_다른_운전자와_trip이다() {
+		write(List.of(), List.of(microtrip("Car-1", 354, "m1", TRIP_START)));
+		write(List.of(), List.of(microtrip("car-1", 354, "m2", TRIP_START)));
+
+		assertThat(driverRepository.count()).isEqualTo(2);
+		assertThat(tripRepository.count()).isEqualTo(2);
+		assertThat(findTrip("car-1", 354).getDriver().getVehicleId()).isEqualTo("car-1");
+	}
+
+	@Test
 	void 같은_차량의_여러_trip은_운전자를_공유한다() {
 		write(List.of(trip(V1, 354, TRIP_START, TRIP_END, 1)), List.of(microtrip(V1, 355, "m1", TRIP_END)));
 		write(List.of(), List.of(microtrip(V1, 356, "m2", TRIP_END)));

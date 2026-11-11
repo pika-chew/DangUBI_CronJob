@@ -1,10 +1,12 @@
 -- ingestJob이 적재하는 테이블 (docs/ingest-spec.md 7장). 시각은 모두 UTC.
 -- 운영: 배포 전에 직접 실행한다. 로컬·테스트: spring.sql.init으로 자동 실행한다.
 -- 여러 번 실행해도 되도록 IF NOT EXISTS로 만든다.
+-- 식별자 컬럼(vehicle_id, *idempotency_key)은 utf8mb4_bin으로 대소문자를 구분한다.
+-- 기본 정렬 규칙(utf8mb4_0900_ai_ci)은 대소문자를 무시해, Writer(Java)의 중복 판단과 DB 유니크 키가 어긋난다.
 
 CREATE TABLE IF NOT EXISTS driver (
     id          BIGINT       NOT NULL AUTO_INCREMENT,
-    vehicle_id  VARCHAR(64)  NOT NULL,
+    vehicle_id  VARCHAR(64)  COLLATE utf8mb4_bin  NOT NULL,
     created_at  DATETIME(3)  NOT NULL,
     updated_at  DATETIME(3)  NOT NULL,
     PRIMARY KEY (id),
@@ -14,7 +16,7 @@ CREATE TABLE IF NOT EXISTS driver (
 CREATE TABLE IF NOT EXISTS trip (
     id                    BIGINT        NOT NULL AUTO_INCREMENT,
     driver_id             BIGINT        NOT NULL,
-    vehicle_id            VARCHAR(64)   NOT NULL,
+    vehicle_id            VARCHAR(64)   COLLATE utf8mb4_bin  NOT NULL,
     tid                   INT           NOT NULL,
     status                VARCHAR(16)   NOT NULL,
     started_at            DATETIME(3)   NULL,
@@ -40,7 +42,7 @@ CREATE TABLE IF NOT EXISTS trip (
     high_speed_time       INT           NULL,
     firmware_version      INT           NULL,
     driving_time          INT           NULL,
-    trip_idempotency_key  VARCHAR(128)  NULL,
+    trip_idempotency_key  VARCHAR(128)  COLLATE utf8mb4_bin  NULL,
     trip_received_at      DATETIME(3)   NULL,
     created_at            DATETIME(3)   NOT NULL,
     updated_at            DATETIME(3)   NOT NULL,
@@ -53,7 +55,7 @@ CREATE TABLE IF NOT EXISTS trip (
 CREATE TABLE IF NOT EXISTS trip_microtrip (
     id                     BIGINT        NOT NULL AUTO_INCREMENT,
     trip_id                BIGINT        NOT NULL,
-    idempotency_key        VARCHAR(128)  NOT NULL,
+    idempotency_key        VARCHAR(128)  COLLATE utf8mb4_bin  NOT NULL,
     collected_at           DATETIME(3)   NOT NULL,
     received_at            DATETIME(3)   NULL,
     lat                    INT           NULL,
