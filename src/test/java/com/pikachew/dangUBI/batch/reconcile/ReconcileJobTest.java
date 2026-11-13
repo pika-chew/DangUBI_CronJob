@@ -12,10 +12,6 @@ import static org.mockito.Mockito.verify;
 import java.time.LocalDate;
 import java.util.List;
 
-import com.pikachew.dangUBI.batch.common.port.ObjectRef;
-import com.pikachew.dangUBI.batch.common.port.RawObjectStore;
-import com.pikachew.dangUBI.batch.common.port.RequeuePublisher;
-import com.pikachew.dangUBI.batch.common.port.SourceObjectStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +30,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import com.pikachew.dangUBI.batch.reconcile.port.ObjectRef;
+import com.pikachew.dangUBI.batch.reconcile.port.RawObjectStore;
+import com.pikachew.dangUBI.batch.reconcile.port.RequeuePublisher;
+import com.pikachew.dangUBI.batch.reconcile.port.SourceObjectStore;
 
 /** Job 통합 테스트: H2 메타 테이블 위에서 reconcileJob 전체를 실행한다. 외부 저장소는 Mock으로 바꾼다. */
 @SpringBatchTest

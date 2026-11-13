@@ -3,9 +3,10 @@ package com.pikachew.dangUBI.infra.s3;
 import java.time.LocalDate;
 import java.util.List;
 
-import com.pikachew.dangUBI.batch.common.port.ObjectRef;
-import com.pikachew.dangUBI.batch.common.port.SourceObjectStore;
 import org.springframework.stereotype.Component;
+
+import com.pikachew.dangUBI.batch.reconcile.port.ObjectRef;
+import com.pikachew.dangUBI.batch.reconcile.port.SourceObjectStore;
 
 /**
  * AWS S3 원본 버킷 구현체 (껍데기).

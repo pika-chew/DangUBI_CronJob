@@ -2,9 +2,10 @@ package com.pikachew.dangUBI.infra.sqs;
 
 import java.util.List;
 
-import com.pikachew.dangUBI.batch.common.port.ObjectRef;
-import com.pikachew.dangUBI.batch.common.port.RequeuePublisher;
 import org.springframework.stereotype.Component;
+
+import com.pikachew.dangUBI.batch.reconcile.port.ObjectRef;
+import com.pikachew.dangUBI.batch.reconcile.port.RequeuePublisher;
 
 /**
  * SQS 재큐잉 구현체 (껍데기).

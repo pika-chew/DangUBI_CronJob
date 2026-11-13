@@ -1,4 +1,4 @@
-package com.pikachew.dangUBI.batch.common.port;
+package com.pikachew.dangUBI.batch.reconcile.port;
 
 import java.time.LocalDate;
 import java.util.List;

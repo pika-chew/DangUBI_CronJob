@@ -1,4 +1,4 @@
-package com.pikachew.dangUBI.batch.common.port;
+package com.pikachew.dangUBI.batch.reconcile.port;
 
 /**
  * 오브젝트 스토리지 객체 하나의 식별 정보. S3·Swift 어느 쪽 SDK 타입에도 묶이지 않도록 따로 둔다.

@@ -8,13 +8,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.pikachew.dangUBI.batch.common.port.ObjectRef;
-import com.pikachew.dangUBI.batch.common.port.RequeuePublisher;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.batch.test.MetaDataInstanceFactory;
+
+import com.pikachew.dangUBI.batch.reconcile.port.ObjectRef;
+import com.pikachew.dangUBI.batch.reconcile.port.RequeuePublisher;
+import com.pikachew.dangUBI.common.exception.ErrorStatus;
+import com.pikachew.dangUBI.common.exception.GeneralException;
 
 /** 단위 테스트: 스프링 컨텍스트·DB 없이 가짜 저장소로 Tasklet만 검증한다. */
 class ReconcileTaskletTest {
@@ -68,8 +71,9 @@ class ReconcileTaskletTest {
 		StepContribution contribution = MetaDataInstanceFactory.createStepExecution().createStepContribution();
 
 		assertThatThrownBy(() -> tasklet.execute(contribution, null))
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessageContaining("누락 2건, 재큐잉 1건");
+				.isInstanceOf(GeneralException.class)
+				.extracting(e -> ((GeneralException) e).getCode())
+				.isEqualTo(ErrorStatus.RECONCILE_REQUEUE_INCOMPLETE);
 	}
 
 	@Test

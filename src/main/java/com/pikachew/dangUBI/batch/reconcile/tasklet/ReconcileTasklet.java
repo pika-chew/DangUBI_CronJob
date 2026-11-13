@@ -8,11 +8,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.pikachew.dangUBI.batch.common.port.ObjectRef;
-import com.pikachew.dangUBI.batch.common.port.RawObjectStore;
-import com.pikachew.dangUBI.batch.common.port.RequeuePublisher;
-import com.pikachew.dangUBI.batch.common.port.SourceObjectStore;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.StepContribution;
@@ -20,6 +15,15 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import com.pikachew.dangUBI.batch.reconcile.port.ObjectRef;
+import com.pikachew.dangUBI.batch.reconcile.port.RawObjectStore;
+import com.pikachew.dangUBI.batch.reconcile.port.RequeuePublisher;
+import com.pikachew.dangUBI.batch.reconcile.port.SourceObjectStore;
+import com.pikachew.dangUBI.common.exception.ErrorStatus;
+import com.pikachew.dangUBI.common.exception.GeneralException;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * S3 목록과 Swift 목록을 비교해 Swift에 없는 객체를 재큐잉한다. 목록 비교는 한 번에 끝나는 작업이라 Tasklet으로 둔다.
@@ -61,8 +65,8 @@ public class ReconcileTasklet implements Tasklet {
 		int requeued = missing.isEmpty() ? 0 : requeuePublisher.publish(missing);
 		if (requeued != missing.size()) {
 			// 일부만 들어갔으면 Step을 실패시켜 다시 돌게 한다. 이미 들어간 객체는 수집 워커가 한 번 더 옮길 뿐이라 안전하다.
-			throw new IllegalStateException(
-					"재큐잉 건수가 누락 건수와 다릅니다: 누락 " + missing.size() + "건, 재큐잉 " + requeued + "건");
+			log.warn("reconcile {}: 재큐잉 건수가 누락 건수와 다름 (누락 {}건, 재큐잉 {}건)", targetDate, missing.size(), requeued);
+			throw new GeneralException(ErrorStatus.RECONCILE_REQUEUE_INCOMPLETE);
 		}
 		log.info("reconcile {}: SQS 재큐잉 {}건", targetDate, requeued);
 
