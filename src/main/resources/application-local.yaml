@@ -12,3 +12,9 @@ spring:
       # 업무 테이블을 자동으로 만든다. IF NOT EXISTS라 매번 실행해도 된다.
       mode: always
       schema-locations: classpath:db/trip-schema-mysql.sql
+
+ubi:
+  local-storage:
+    # S3·Swift 대신 읽는 로컬 디렉터리. 상대 경로는 실행 위치(레포 루트) 기준이다.
+    # 그 아래 swift/, s3/ 디렉터리의 상대 경로가 객체 키다. 다른 위치를 쓰려면 UBI_LOCAL_STORAGE_ROOT로 바꾼다.
+    root: ${UBI_LOCAL_STORAGE_ROOT:../local-storage}
