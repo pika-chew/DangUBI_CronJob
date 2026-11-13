@@ -13,6 +13,9 @@ public final class LocalStorageStaticValues {
 	/** 루트 아래 Swift 컨테이너 역할을 하는 디렉터리. 그 아래 상대 경로가 객체 키다 */
 	public static final String LOCAL_STORAGE_SWIFT_DIR = "swift";
 
+	/** 루트 아래 S3 원본 버킷 역할을 하는 디렉터리. 키 모양은 swift와 같다 */
+	public static final String LOCAL_STORAGE_S3_DIR = "s3";
+
 	/** 객체 키의 경로 구분자. OS와 관계없이 키는 '/'로 나눈다 */
 	public static final String LOCAL_STORAGE_KEY_DELIMITER = "/";
 

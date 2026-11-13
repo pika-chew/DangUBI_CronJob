@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.pikachew.dangUBI.batch.reconcile.port.SourceObjectStore;
+import com.pikachew.dangUBI.infra.local.LocalSourceObjectStore;
 import com.pikachew.dangUBI.infra.local.LocalSwiftClient;
 import com.pikachew.dangUBI.infra.swift.SwiftClient;
 
@@ -24,11 +26,19 @@ class LocalStorageConfigTest {
 	private SwiftClient swiftClient;
 
 	@Autowired
+	private SourceObjectStore sourceObjectStore;
+
+	@Autowired
 	private LocalStorageProperties properties;
 
 	@Test
 	void local_프로필이면_SwiftClient로_LocalSwiftClient가_주입된다() {
 		assertThat(swiftClient).isInstanceOf(LocalSwiftClient.class);
+	}
+
+	@Test
+	void local_프로필이면_SourceObjectStore로_LocalSourceObjectStore가_주입된다() {
+		assertThat(sourceObjectStore).isInstanceOf(LocalSourceObjectStore.class);
 	}
 
 	@Test
