@@ -26,11 +26,11 @@ class SwiftTelemetryFileReaderTest {
 
 	@Test
 	void 그날_prefix로_조회해_적재_대상만_키_순서로_돌려준다() {
-		given(swiftClient.listObjectNames("firehose/processed/2026/11/10/")).willReturn(List.of(
-				"firehose/processed/2026/11/10/05/b.jsonl.gz",
-				"firehose/processed/2026/11/10/03/a.jsonl.gz",
-				"firehose/processed/2026/11/10/03/readme.txt",
-				"firehose/processed/2026/11/10/03/"));
+		given(swiftClient.listObjects("firehose/processed/2026/11/10/")).willReturn(List.of(
+				new SwiftObject("firehose/processed/2026/11/10/05/b.jsonl.gz", 10),
+				new SwiftObject("firehose/processed/2026/11/10/03/a.jsonl.gz", 10),
+				new SwiftObject("firehose/processed/2026/11/10/03/readme.txt", 10),
+				new SwiftObject("firehose/processed/2026/11/10/03/", 0)));
 
 		List<String> files = reader.listFiles(DAY);
 
