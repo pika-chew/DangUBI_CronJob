@@ -7,3 +7,8 @@ spring:
   batch:
     jdbc:
       initialize-schema: always
+  sql:
+    init:
+      # 업무 테이블을 자동으로 만든다. IF NOT EXISTS라 매번 실행해도 된다.
+      mode: always
+      schema-locations: classpath:db/trip-schema-mysql.sql
