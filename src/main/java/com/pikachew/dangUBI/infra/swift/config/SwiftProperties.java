@@ -5,8 +5,6 @@ import static com.pikachew.dangUBI.common.consts.ObjectStorageStaticValues.SWIFT
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Swift s3api 접속 설정. 값은 환경 변수로 받는다 (application.yaml 참고).
- *
  * @param endpoint  Swift proxy의 s3api 주소. 예: https://swift.example.com:8080
  * @param container 수집 파일이 있는 컨테이너 (S3의 버킷)
  * @param accessKey Keystone EC2 credentials의 access

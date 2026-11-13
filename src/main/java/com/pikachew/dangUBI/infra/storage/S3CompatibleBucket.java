@@ -12,10 +12,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 
-/**
- * S3 API로 버킷 하나를 읽는다. AWS S3 원본 버킷과 Swift(s3api) 컨테이너가 같이 쓴다.
- * 엔드포인트·인증은 넘겨받은 {@link S3Client}가 정하고, 이 클래스는 목록 조회와 내용 열기만 한다.
- */
+/** S3 API로 버킷 하나를 읽는다. AWS S3 원본 버킷과 Swift(s3api) 컨테이너가 같이 쓴다 */
 public class S3CompatibleBucket {
 
 	private final S3Client s3Client;

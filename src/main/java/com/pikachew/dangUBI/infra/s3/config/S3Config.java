@@ -12,10 +12,7 @@ import org.springframework.util.Assert;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
-/**
- * AWS S3 원본 버킷에 붙는 S3Client를 만든다. local 프로필에서는 만들지 않는다.
- * 자격 증명은 지정하지 않아 SDK 기본 체인(환경 변수 AWS_ACCESS_KEY_ID 등, K8s IRSA, 프로필 파일 순)이 첫 요청 때 찾는다.
- */
+/** 자격 증명은 AWS SDK 기본 체인(환경 변수, IRSA 등)으로 찾는다 */
 @Configuration
 @Profile(NOT_LOCAL_PROFILE)
 @EnableConfigurationProperties(S3Properties.class)

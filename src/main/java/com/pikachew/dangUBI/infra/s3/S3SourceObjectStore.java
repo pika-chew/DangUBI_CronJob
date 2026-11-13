@@ -18,12 +18,7 @@ import com.pikachew.dangUBI.infra.storage.TelemetryObjectKeys;
 
 import software.amazon.awssdk.services.s3.S3Client;
 
-/**
- * AWS S3 원본 버킷의 {@link SourceObjectStore} 구현체. 접속 설정은 {@link com.pikachew.dangUBI.infra.s3.config.S3Config}가 만든다.
- * S3와 Swift는 같은 키를 쓰므로 대상 파일 판별은 Swift와 같은 {@link TelemetryObjectKeys} 규칙을 따른다 (docs/ingest-spec.md 2장).
- *
- * local 프로필에서는 로컬 디렉터리를 읽는 infra.local.LocalSourceObjectStore가 대신 쓰인다.
- */
+/** AWS S3 원본 버킷의 {@link SourceObjectStore} 구현체. S3와 Swift는 같은 키 규칙을 쓴다 (docs/ingest-spec.md 2장) */
 @Component
 @Profile(NOT_LOCAL_PROFILE)
 public class S3SourceObjectStore implements SourceObjectStore {

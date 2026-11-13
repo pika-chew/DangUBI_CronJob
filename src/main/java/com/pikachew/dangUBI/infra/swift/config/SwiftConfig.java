@@ -18,19 +18,13 @@ import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
-/**
- * Swift s3api에 붙는 S3Client를 만든다. Swift는 AWS가 아니므로 엔드포인트를 바꾸고, path-style 주소를 쓰고,
- * Keystone EC2 credentials로 서명한다. local 프로필에서는 만들지 않는다.
- */
+/** Swift s3api용 S3Client. Keystone EC2 credentials로 서명한다 */
 @Configuration
 @Profile(NOT_LOCAL_PROFILE)
 @EnableConfigurationProperties(SwiftProperties.class)
 public class SwiftConfig {
 
-	/**
-	 * 체크섬은 필요한 요청에만 계산·검증한다(WHEN_REQUIRED). SDK 2.30부터 기본값이 모든 요청에 CRC 체크섬을 붙이는 것으로 바뀌었는데,
-	 * S3 호환 저장소가 이 헤더를 모르면 요청이 실패할 수 있다.
-	 */
+	/** 체크섬은 WHEN_REQUIRED: SDK 2.30부터 모든 요청에 CRC 체크섬을 붙이는데, S3 호환 저장소가 모르면 요청이 실패할 수 있다 */
 	@Bean(SWIFT_S3_CLIENT_BEAN)
 	public S3Client swiftS3Client(SwiftProperties properties) {
 		Assert.hasText(properties.endpoint(), "ubi.swift.endpoint(SWIFT_ENDPOINT)가 비어 있습니다");
