@@ -15,8 +15,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class SwiftClient {
 
-	/** prefix 아래 객체 이름 전부. 순서는 보장하지 않는다 */
-	public List<String> listObjectNames(String prefix) {
+	/** prefix 아래 객체 전부(이름, 크기). 순서는 보장하지 않는다 */
+	public List<SwiftObject> listObjects(String prefix) {
 		throw new UnsupportedOperationException("Swift 목록 조회가 아직 구현되지 않았습니다");
 	}
 

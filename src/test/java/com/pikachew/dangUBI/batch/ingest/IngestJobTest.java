@@ -1,5 +1,6 @@
 package com.pikachew.dangUBI.batch.ingest;
 
+import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_JOB_NAME;
 import static com.pikachew.dangUBI.domain.trip.model.TripSnapshotFixtures.microtrip;
 import static com.pikachew.dangUBI.domain.trip.model.TripSnapshotFixtures.trip;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,8 +14,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.InvalidJobParametersException;
 import org.springframework.batch.core.job.parameters.JobParameters;
@@ -25,6 +28,7 @@ import org.springframework.batch.test.JobOperatorTestUtils;
 import org.springframework.batch.test.JobRepositoryTestUtils;
 import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -70,6 +74,16 @@ class IngestJobTest {
 
 	@MockitoBean
 	private TelemetryFileReader telemetryFileReader;
+
+	@Autowired
+	@Qualifier(INGEST_JOB_NAME)
+	private Job ingestJob;
+
+	/** Job이 여러 개면 JobOperatorTestUtils가 Job을 고르지 않으므로 직접 지정한다 */
+	@BeforeEach
+	void setUpJob() {
+		jobOperatorTestUtils.setJob(ingestJob);
+	}
 
 	@AfterEach
 	void cleanUp() {

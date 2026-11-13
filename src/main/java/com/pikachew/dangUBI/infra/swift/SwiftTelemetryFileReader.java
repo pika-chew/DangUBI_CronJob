@@ -24,7 +24,8 @@ public class SwiftTelemetryFileReader implements TelemetryFileReader {
 
 	@Override
 	public List<String> listFiles(LocalDate date) {
-		return swiftClient.listObjectNames(TelemetryObjectKeys.dayPrefix(date)).stream()
+		return swiftClient.listObjects(TelemetryObjectKeys.dayPrefix(date)).stream()
+				.map(SwiftObject::name)
 				.filter(key -> TelemetryObjectKeys.isTelemetryFile(key, date))
 				.sorted()
 				.toList();
