@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import com.pikachew.dangUBI.batch.ingest.dto.ParsedTelemetryFile;
 import com.pikachew.dangUBI.batch.ingest.port.TelemetryFileReader;
+import com.pikachew.dangUBI.infra.storage.TelemetryObjectKeys;
 
 import lombok.RequiredArgsConstructor;
 
