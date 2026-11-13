@@ -33,3 +33,12 @@ ubi:
       # [MEMORY RISK] 이 값만큼의 파일 내용과 엔티티가 커밋 전까지 한꺼번에 힙에 올라간다.
       #               운영 최대 파일 크기 × 이 값이 힙 한도 안에 들어오는지 장애 테스트로 확인한다. (임시값)
       chunk-size: 10
+  # 외부 저장소 접속 정보는 환경 변수로 받는다. 비어 있으면 앱이 뜰 때 실패한다. local 프로필에서는 읽지 않는다.
+  swift:
+    # Swift proxy의 s3api 주소와 컨테이너. 인증은 Keystone EC2 credentials(access/secret)로 한다.
+    endpoint: ${SWIFT_ENDPOINT:}
+    container: ${SWIFT_CONTAINER:}
+    access-key: ${SWIFT_ACCESS_KEY:}
+    secret-key: ${SWIFT_SECRET_KEY:}
+    # 서명에 쓰는 리전 이름. s3api의 location 설정과 맞춘다(기본 us-east-1).
+    region: ${SWIFT_REGION:us-east-1}
