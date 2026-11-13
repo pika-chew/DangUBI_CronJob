@@ -30,6 +30,9 @@ ubi:
   s3:
     bucket: test-source
     region: ap-northeast-2
+  sqs:
+    queue-url: http://localhost:65535/000000000000/test-queue
+    region: ap-northeast-2
   swift:
     endpoint: http://localhost:65535
     container: test-raw

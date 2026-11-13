@@ -38,6 +38,10 @@ ubi:
     # Firehose가 쓰는 AWS S3 원본 버킷. 자격 증명은 AWS SDK 기본 체인(AWS_ACCESS_KEY_ID 등 또는 IRSA)으로 찾는다.
     bucket: ${S3_SOURCE_BUCKET:}
     region: ${AWS_REGION:}
+  sqs:
+    # 수집 워커가 읽는 큐. 누락 객체를 S3 이벤트 형식으로 다시 넣는다.
+    queue-url: ${SQS_REQUEUE_QUEUE_URL:}
+    region: ${AWS_REGION:}
   swift:
     # Swift proxy의 s3api 주소와 컨테이너. 인증은 Keystone EC2 credentials(access/secret)로 한다.
     endpoint: ${SWIFT_ENDPOINT:}
