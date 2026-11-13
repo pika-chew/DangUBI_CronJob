@@ -27,6 +27,9 @@ ubi:
       # 파일 하나마다 커밋해 이어 읽기를 확인할 수 있게 한다.
       chunk-size: 1
   # 외부 저장소 클라이언트 빈을 만들기 위한 가짜 값. 빈을 만들 때는 접속하지 않고, 테스트는 포트를 Mock으로 바꾼다.
+  s3:
+    bucket: test-source
+    region: ap-northeast-2
   swift:
     endpoint: http://localhost:65535
     container: test-raw

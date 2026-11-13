@@ -34,6 +34,10 @@ ubi:
       #               운영 최대 파일 크기 × 이 값이 힙 한도 안에 들어오는지 장애 테스트로 확인한다. (임시값)
       chunk-size: 10
   # 외부 저장소 접속 정보는 환경 변수로 받는다. 비어 있으면 앱이 뜰 때 실패한다. local 프로필에서는 읽지 않는다.
+  s3:
+    # Firehose가 쓰는 AWS S3 원본 버킷. 자격 증명은 AWS SDK 기본 체인(AWS_ACCESS_KEY_ID 등 또는 IRSA)으로 찾는다.
+    bucket: ${S3_SOURCE_BUCKET:}
+    region: ${AWS_REGION:}
   swift:
     # Swift proxy의 s3api 주소와 컨테이너. 인증은 Keystone EC2 credentials(access/secret)로 한다.
     endpoint: ${SWIFT_ENDPOINT:}
