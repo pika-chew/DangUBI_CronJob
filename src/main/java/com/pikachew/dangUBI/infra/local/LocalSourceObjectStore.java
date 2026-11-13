@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import com.pikachew.dangUBI.batch.reconcile.port.ObjectRef;
 import com.pikachew.dangUBI.batch.reconcile.port.SourceObjectStore;
 import com.pikachew.dangUBI.infra.local.config.LocalStorageProperties;
-import com.pikachew.dangUBI.infra.swift.TelemetryObjectKeys;
+import com.pikachew.dangUBI.infra.storage.TelemetryObjectKeys;
 
 /**
  * local 프로필에서 S3 원본 버킷 대신 로컬 디렉터리({root}/s3)를 읽는 {@link SourceObjectStore} 구현체.

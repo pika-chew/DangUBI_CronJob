@@ -1,4 +1,4 @@
-package com.pikachew.dangUBI.infra.swift;
+package com.pikachew.dangUBI.infra.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

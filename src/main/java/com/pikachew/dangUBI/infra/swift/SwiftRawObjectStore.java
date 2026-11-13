@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import com.pikachew.dangUBI.batch.reconcile.port.ObjectRef;
 import com.pikachew.dangUBI.batch.reconcile.port.RawObjectStore;
+import com.pikachew.dangUBI.infra.storage.TelemetryObjectKeys;
 
 import lombok.RequiredArgsConstructor;
 

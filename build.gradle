@@ -21,6 +21,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-batch-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-jackson'
+	// S3 원본·Swift(s3api)·SQS 접근. Swift는 s3api 미들웨어로 S3 SDK를 같이 쓴다
+	implementation platform('software.amazon.awssdk:bom:2.57.0')
+	implementation 'software.amazon.awssdk:s3'
+	implementation 'software.amazon.awssdk:sqs'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'

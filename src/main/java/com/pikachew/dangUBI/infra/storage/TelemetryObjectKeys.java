@@ -1,4 +1,4 @@
-package com.pikachew.dangUBI.infra.swift;
+package com.pikachew.dangUBI.infra.storage;
 
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_DAY_PATH_FORMAT;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_HOURLY_FILE_PATTERN;
