@@ -15,8 +15,10 @@ import com.pikachew.dangUBI.batch.common.port.RequeuePublisher;
 import com.pikachew.dangUBI.batch.common.port.SourceObjectStore;
 import com.pikachew.dangUBI.batch.reconcile.config.ReconcileJobConfig;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.InvalidJobParametersException;
 import org.springframework.batch.core.job.parameters.JobParameters;
@@ -26,6 +28,7 @@ import org.springframework.batch.test.JobOperatorTestUtils;
 import org.springframework.batch.test.JobRepositoryTestUtils;
 import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -52,6 +55,16 @@ class ReconcileJobTest {
 
 	@MockitoBean
 	private RequeuePublisher requeuePublisher;
+
+	@Autowired
+	@Qualifier(ReconcileJobConfig.JOB_NAME)
+	private Job reconcileJob;
+
+	/** Job이 여러 개면 JobOperatorTestUtils가 Job을 고르지 않으므로 직접 지정한다 */
+	@BeforeEach
+	void setUpJob() {
+		jobOperatorTestUtils.setJob(reconcileJob);
+	}
 
 	@AfterEach
 	void cleanUp() {
