@@ -1,5 +1,8 @@
 package com.pikachew.dangUBI.batch.reconcile;
 
+import static com.pikachew.dangUBI.common.consts.ReconcileStaticValues.RECONCILE_JOB_NAME;
+import static com.pikachew.dangUBI.common.consts.ReconcileStaticValues.RECONCILE_STEP_NAME;
+import static com.pikachew.dangUBI.common.consts.ReconcileStaticValues.RECONCILE_TARGET_DATE_PARAM;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,7 +16,6 @@ import com.pikachew.dangUBI.batch.common.port.ObjectRef;
 import com.pikachew.dangUBI.batch.common.port.RawObjectStore;
 import com.pikachew.dangUBI.batch.common.port.RequeuePublisher;
 import com.pikachew.dangUBI.batch.common.port.SourceObjectStore;
-import com.pikachew.dangUBI.batch.reconcile.config.ReconcileJobConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +59,7 @@ class ReconcileJobTest {
 	private RequeuePublisher requeuePublisher;
 
 	@Autowired
-	@Qualifier(ReconcileJobConfig.JOB_NAME)
+	@Qualifier(RECONCILE_JOB_NAME)
 	private Job reconcileJob;
 
 	/** Job이 여러 개면 JobOperatorTestUtils가 Job을 고르지 않으므로 직접 지정한다 */
@@ -82,7 +84,7 @@ class ReconcileJobTest {
 		assertThat(execution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 		verify(requeuePublisher).publish(objects("b", "c"));
 		StepExecution step = execution.getStepExecutions().iterator().next();
-		assertThat(step.getStepName()).isEqualTo(ReconcileJobConfig.STEP_NAME);
+		assertThat(step.getStepName()).isEqualTo(RECONCILE_STEP_NAME);
 		assertThat(step.getFilterCount()).isEqualTo(1);
 		assertThat(step.getWriteCount()).isEqualTo(2);
 	}
@@ -104,7 +106,7 @@ class ReconcileJobTest {
 	}
 
 	private static JobParameters targetDate(String value) {
-		return new JobParametersBuilder().addString(ReconcileJobConfig.TARGET_DATE, value).toJobParameters();
+		return new JobParametersBuilder().addString(RECONCILE_TARGET_DATE_PARAM, value).toJobParameters();
 	}
 
 	private static List<ObjectRef> objects(String... keys) {

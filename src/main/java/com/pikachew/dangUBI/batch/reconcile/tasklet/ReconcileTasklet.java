@@ -1,5 +1,7 @@
 package com.pikachew.dangUBI.batch.reconcile.tasklet;
 
+import static com.pikachew.dangUBI.common.consts.ReconcileStaticValues.RECONCILE_TARGET_DATE_EXPRESSION;
+
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -40,7 +42,7 @@ public class ReconcileTasklet implements Tasklet {
 	private final LocalDate targetDate;
 
 	public ReconcileTasklet(SourceObjectStore sourceObjectStore, RawObjectStore rawObjectStore,
-			RequeuePublisher requeuePublisher, @Value("#{jobParameters['targetDate']}") String targetDate) {
+			RequeuePublisher requeuePublisher, @Value(RECONCILE_TARGET_DATE_EXPRESSION) String targetDate) {
 		this.sourceObjectStore = sourceObjectStore;
 		this.rawObjectStore = rawObjectStore;
 		this.requeuePublisher = requeuePublisher;
