@@ -12,7 +12,7 @@ import org.springframework.util.Assert;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
-/** 자격 증명은 AWS SDK 기본 체인(환경 변수, IRSA 등)으로 찾는다 */
+/** 자격 증명은 AWS SDK 기본 체인이 환경 변수 AWS_ACCESS_KEY_ID·AWS_SECRET_ACCESS_KEY에서 읽는다 */
 @Configuration
 @Profile(NOT_LOCAL_PROFILE)
 @EnableConfigurationProperties(S3Properties.class)

@@ -18,6 +18,8 @@ S3와 Swift는 같은 키를 쓰고(ingest-spec.md 2장), 목록 조회와 내�
 | --- | --- | --- |
 | `S3_SOURCE_BUCKET` | `ubi.s3.bucket` | Firehose가 쓰는 원본 버킷 |
 | `AWS_REGION` | `ubi.s3.region`, `ubi.sqs.region` | 원본 버킷·큐 리전. 예: `ap-northeast-2` |
+| `AWS_ACCESS_KEY_ID` | (SDK가 직접 읽음) | IAM 사용자 액세스 키 |
+| `AWS_SECRET_ACCESS_KEY` | (SDK가 직접 읽음) | IAM 사용자 시크릿 키 |
 | `SQS_REQUEUE_QUEUE_URL` | `ubi.sqs.queue-url` | 수집 워커가 읽는 큐 URL |
 | `SWIFT_ENDPOINT` | `ubi.swift.endpoint` | Swift proxy의 s3api 주소 |
 | `SWIFT_CONTAINER` | `ubi.swift.container` | 수집 파일 컨테이너 |
@@ -27,8 +29,10 @@ S3와 Swift는 같은 키를 쓰고(ingest-spec.md 2장), 목록 조회와 내�
 
 ## 인증
 
-- **AWS (S3, SQS)**: 키를 설정에 두지 않는다. AWS SDK 기본 체인이 `AWS_ACCESS_KEY_ID`·`AWS_SECRET_ACCESS_KEY` 환경 변수나 K8s IRSA에서 찾는다.
+- **AWS (S3, SQS)**: IAM 사용자의 액세스 키를 Vault → K8s Secret → 환경 변수 `AWS_ACCESS_KEY_ID`·`AWS_SECRET_ACCESS_KEY`로 넣는다.
+  키는 설정 파일에 두지 않고 AWS SDK 기본 체인이 환경 변수에서 읽는다.
   필요한 권한: 원본 버킷 `s3:ListBucket`, 큐 `sqs:SendMessage`.
+  IRSA 같은 웹 아이덴티티 방식으로 바꾸려면 `software.amazon.awssdk:sts` 의존성을 추가해야 한다(없으면 SDK가 그 단계를 건너뛴다).
 - **Swift**: s3api는 S3 서명(SigV4)을 Keystone EC2 credentials로 검증한다. 배치용 사용자·프로젝트로 한 번 만든다.
 
   ```bash
