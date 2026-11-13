@@ -4,7 +4,7 @@ import java.io.InputStream;
 import java.util.List;
 
 /**
- * Swift 객체 저장소 접근. 구현체는 운영용 {@link SwiftClientImpl}이다.
+ * Swift 객체 저장소 접근. 구현체는 운영용 {@link SwiftClientImpl}, local 프로필용 infra.local.LocalSwiftClient다.
  * 목록 조회·키 규칙·파일 해석은 이 인터페이스 위({@link SwiftTelemetryFileReader}, {@link SwiftRawObjectStore})에서 하므로
  * 구현체는 객체 목록과 내용만 돌려준다.
  */
