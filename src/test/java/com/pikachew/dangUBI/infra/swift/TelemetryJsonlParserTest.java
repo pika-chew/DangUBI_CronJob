@@ -29,7 +29,7 @@ public class TelemetryJsonlParserTest {
 			{"vehicleId":"vehicle-001","ts":1793575800100,"ty":4,"schemaVersion":1,"idempotencyKey":"example-microtrip-1",\
 			"pld":{"tid":354,"clt":1793575800000,"sp":70,"em":"28"}}""";
 
-	private static final String KEY = "firehose/processed/2026/11/10/03/a.jsonl.gz";
+	private static final String KEY = "firehose/processed/year=2026/month=11/day=10/hour=03/a.jsonl.gz";
 
 	// ---- 한 줄 ----
 

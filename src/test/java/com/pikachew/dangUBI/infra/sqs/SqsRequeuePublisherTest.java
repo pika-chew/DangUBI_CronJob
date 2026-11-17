@@ -70,22 +70,22 @@ class SqsRequeuePublisherTest {
 	@Test
 	void 메시지는_원본_버킷의_S3_ObjectCreated_이벤트_형식이다() {
 		JsonNode record = jsonMapper.readTree(publisher.toS3Event(
-				new ObjectRef("firehose/processed/2026/11/08/03/a.jsonl.gz", 120))).get("Records").get(0);
+				new ObjectRef("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", 120))).get("Records").get(0);
 
 		assertThat(record.get("eventSource").asString()).isEqualTo("aws:s3");
 		assertThat(record.get("eventName").asString()).isEqualTo("ObjectCreated:Put");
 		assertThat(record.get("awsRegion").asString()).isEqualTo("ap-northeast-2");
 		assertThat(record.at("/s3/bucket/name").asString()).isEqualTo("ubi-source");
-		assertThat(record.at("/s3/object/key").asString()).isEqualTo("firehose/processed/2026/11/08/03/a.jsonl.gz");
+		assertThat(record.at("/s3/object/key").asString()).isEqualTo("firehose/processed/year%3D2026/month%3D11/day%3D08/hour%3D03/a.jsonl.gz");
 		assertThat(record.at("/s3/object/size").asLong()).isEqualTo(120);
 	}
 
 	@Test
 	void 키는_경로_구간마다_URL_인코딩한다() {
 		JsonNode record = jsonMapper.readTree(publisher.toS3Event(
-				new ObjectRef("firehose/processed/2026/11/08/03/a b+c=.jsonl.gz", 1))).get("Records").get(0);
+				new ObjectRef("firehose/processed/year=2026/month=11/day=08/hour=03/a b+c=.jsonl.gz", 1))).get("Records").get(0);
 
-		assertThat(record.at("/s3/object/key").asString()).isEqualTo("firehose/processed/2026/11/08/03/a+b%2Bc%3D.jsonl.gz");
+		assertThat(record.at("/s3/object/key").asString()).isEqualTo("firehose/processed/year%3D2026/month%3D11/day%3D08/hour%3D03/a+b%2Bc%3D.jsonl.gz");
 	}
 
 	private static SendMessageBatchResponse allSuccessful(SendMessageBatchRequest request) {
@@ -99,7 +99,7 @@ class SqsRequeuePublisherTest {
 
 	private static List<ObjectRef> objects(int count) {
 		return IntStream.range(0, count)
-				.mapToObj(i -> new ObjectRef("firehose/processed/2026/11/08/03/" + i + ".jsonl.gz", i))
+				.mapToObj(i -> new ObjectRef("firehose/processed/year=2026/month=11/day=08/hour=03/" + i + ".jsonl.gz", i))
 				.toList();
 	}
 

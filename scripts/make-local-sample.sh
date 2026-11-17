@@ -20,37 +20,37 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="${1:-${UBI_LOCAL_STORAGE_ROOT:-$REPO_ROOT/../local-storage}}"
-DAY_PATH="firehose/processed/2026/11/08"
+DAY_PATH="firehose/processed/year=2026/month=11/day=08"
 
 S3_DAY="$ROOT/s3/$DAY_PATH"
 SWIFT_DAY="$ROOT/swift/$DAY_PATH"
-mkdir -p "$S3_DAY/03" "$S3_DAY/14" "$SWIFT_DAY/03"
+mkdir -p "$S3_DAY/hour=03" "$S3_DAY/hour=14" "$SWIFT_DAY/hour=03"
 ROOT="$(cd "$ROOT" && pwd)"
 
 # 시각(epoch ms, UTC): 03:00=1794106800000, 03:05=1794107100000, 03:10=1794107400000, 03:30=1794108600000
 #                      14:00=1794146400000, 14:10=1794147000000, 14:40=1794148800000
 
-gzip -n -c > "$S3_DAY/03/sample-a.jsonl.gz" <<'EOF'
+gzip -n -c > "$S3_DAY/hour=03/sample-a.jsonl.gz" <<'EOF'
 {"vehicleId":"vehicle-001","ts":1794106800100,"ty":4,"schemaVersion":1,"idempotencyKey":"sample-mt-001-1","pld":{"tid":1,"clt":1794106800000,"sp":40,"em":"0","xyz":"10,-5,2"}}
 {"vehicleId":"vehicle-001","ts":1794107100100,"ty":4,"schemaVersion":1,"idempotencyKey":"sample-mt-001-2","pld":{"tid":1,"clt":1794107100000,"sp":70,"em":"28","xyz":"35,12,-8"}}
 {"vehicleId":"vehicle-001","ts":1794107400100,"ty":4,"schemaVersion":1,"idempotencyKey":"sample-mt-001-3","pld":{"tid":1,"clt":1794107400000,"sp":"55","em":"8","xyz":"-20,3,1"}}
 EOF
 
-gzip -n -c > "$S3_DAY/03/sample-b.jsonl.gz" <<'EOF'
+gzip -n -c > "$S3_DAY/hour=03/sample-b.jsonl.gz" <<'EOF'
 {"vehicleId":"vehicle-001","ts":1794108600100,"ty":3,"schemaVersion":1,"idempotencyKey":"sample-trip-001","pld":{"tid":1,"stt":1794106800000,"edt":1794108600000,"dis":15000,"hsts":90,"mesp":30,"dtvt":1800}}
 not a json line
 EOF
 
-gzip -n -c > "$S3_DAY/14/sample-c.jsonl.gz" <<'EOF'
+gzip -n -c > "$S3_DAY/hour=14/sample-c.jsonl.gz" <<'EOF'
 {"vehicleId":"vehicle-002","ts":1794146400100,"ty":4,"schemaVersion":1,"idempotencyKey":"sample-mt-002-1","pld":{"tid":7,"clt":1794146400000,"sp":60,"em":"0","xyz":"0,0,0"}}
 {"vehicleId":"vehicle-002","ts":1794147000100,"ty":4,"schemaVersion":1,"idempotencyKey":"sample-mt-002-2","pld":{"tid":7,"clt":1794147000000,"sp":80,"em":"20","xyz":"5,40,3"}}
 {"vehicleId":"vehicle-002","ts":1794148800100,"ty":3,"schemaVersion":1,"idempotencyKey":"sample-trip-002","pld":{"tid":7,"stt":1794146400000,"edt":1794148800000,"dis":32000,"hsts":110,"mesp":48,"dtvt":2400}}
 EOF
 
-echo "not a telemetry file" > "$S3_DAY/03/readme.txt"
+echo "not a telemetry file" > "$S3_DAY/hour=03/readme.txt"
 
 # 수집 워커가 sample-a, sample-b만 옮긴 상황
-cp "$S3_DAY/03/sample-a.jsonl.gz" "$S3_DAY/03/sample-b.jsonl.gz" "$SWIFT_DAY/03/"
+cp "$S3_DAY/hour=03/sample-a.jsonl.gz" "$S3_DAY/hour=03/sample-b.jsonl.gz" "$SWIFT_DAY/hour=03/"
 
 echo "샘플을 만들었습니다: $ROOT"
 (cd "$ROOT" && find s3 swift -type f | sort)

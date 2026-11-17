@@ -51,7 +51,7 @@ S3와 Swift는 같은 키를 쓰고(ingest-spec.md 2장), 목록 조회와 내�
 
 ```json
 {"Records":[{"eventVersion":"2.1","eventSource":"aws:s3","awsRegion":"ap-northeast-2","eventName":"ObjectCreated:Put",
-  "s3":{"bucket":{"name":"<원본 버킷>"},"object":{"key":"firehose/processed/2026/11/08/03/a.jsonl.gz","size":120}}}]}
+  "s3":{"bucket":{"name":"<원본 버킷>"},"object":{"key":"firehose/processed/year%3D2026/month%3D11/day%3D08/hour%3D03/a.jsonl.gz","size":120}}}]}
 ```
 
 TODO: 수집 워커가 실제로 읽는 필드를 수집 워커 담당과 확인한다.

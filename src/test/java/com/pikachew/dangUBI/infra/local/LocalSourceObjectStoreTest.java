@@ -29,14 +29,14 @@ class LocalSourceObjectStoreTest {
 
 	@Test
 	void s3_디렉터리에서_그날_수집_파일만_이름과_크기로_돌려준다() throws IOException {
-		write("s3/firehose/processed/2026/11/08/03/a.jsonl.gz", "abc");
-		write("s3/firehose/processed/2026/11/08/03/readme.txt", "x");
-		write("s3/firehose/processed/2026/11/08/03/nested/b.jsonl.gz", "x");
-		write("s3/firehose/processed/2026/11/09/00/c.jsonl.gz", "x");
-		write("swift/firehose/processed/2026/11/08/04/d.jsonl.gz", "x");
+		write("s3/firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", "abc");
+		write("s3/firehose/processed/year=2026/month=11/day=08/hour=03/readme.txt", "x");
+		write("s3/firehose/processed/year=2026/month=11/day=08/hour=03/nested/b.jsonl.gz", "x");
+		write("s3/firehose/processed/year=2026/month=11/day=09/hour=00/c.jsonl.gz", "x");
+		write("swift/firehose/processed/year=2026/month=11/day=08/hour=04/d.jsonl.gz", "x");
 
 		assertThat(store.listObjects(LocalDate.parse("2026-11-08")))
-				.containsExactly(new ObjectRef("firehose/processed/2026/11/08/03/a.jsonl.gz", 3));
+				.containsExactly(new ObjectRef("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", 3));
 	}
 
 	@Test

@@ -15,7 +15,7 @@ import com.pikachew.dangUBI.infra.swift.SwiftObject;
 
 /**
  * local 프로필에서 Swift 대신 로컬 디렉터리({root}/swift)를 읽는 {@link SwiftClient} 구현체.
- * 예: {root}/swift/firehose/processed/2026/11/08/03/a.jsonl.gz → 키 firehose/processed/2026/11/08/03/a.jsonl.gz
+ * 예: {root}/swift/firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz → 키 firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz
  */
 @Component
 @Profile(LOCAL_PROFILE)

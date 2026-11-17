@@ -16,9 +16,9 @@ import com.pikachew.dangUBI.common.consts.IngestStaticValues;
 /** 단위 테스트: 하루치 파일 키를 넘기고, 마지막 키를 남겨 이어 읽는 Reader */
 class IngestFileReaderTest {
 
-	private static final String A = "firehose/processed/2026/11/10/03/a.jsonl.gz";
-	private static final String B = "firehose/processed/2026/11/10/04/b.jsonl.gz";
-	private static final String C = "firehose/processed/2026/11/10/05/c.jsonl.gz";
+	private static final String A = "firehose/processed/year=2026/month=11/day=10/hour=03/a.jsonl.gz";
+	private static final String B = "firehose/processed/year=2026/month=11/day=10/hour=04/b.jsonl.gz";
+	private static final String C = "firehose/processed/year=2026/month=11/day=10/hour=05/c.jsonl.gz";
 
 	private final TelemetryFileReader telemetryFileReader = mock(TelemetryFileReader.class);
 	private final IngestFileReader reader = new IngestFileReader(telemetryFileReader, "2026-11-10");

@@ -29,17 +29,17 @@ class S3SourceObjectStoreTest {
 	void 그날_prefix로_원본_버킷을_조회해_수집_파일만_돌려준다() {
 		given(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).willReturn(ListObjectsV2Response.builder()
 				.contents(
-						object("firehose/processed/2026/11/08/03/a.jsonl.gz", 120),
-						object("firehose/processed/2026/11/08/03/readme.txt", 5),
-						object("firehose/processed/2026/11/08/03/nested/b.jsonl.gz", 7))
+						object("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", 120),
+						object("firehose/processed/year=2026/month=11/day=08/hour=03/readme.txt", 5),
+						object("firehose/processed/year=2026/month=11/day=08/hour=03/nested/b.jsonl.gz", 7))
 				.isTruncated(false).build());
 
 		assertThat(store.listObjects(LocalDate.parse("2026-11-08")))
-				.containsExactly(new ObjectRef("firehose/processed/2026/11/08/03/a.jsonl.gz", 120));
+				.containsExactly(new ObjectRef("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", 120));
 		ArgumentCaptor<ListObjectsV2Request> request = ArgumentCaptor.forClass(ListObjectsV2Request.class);
 		verify(s3Client).listObjectsV2(request.capture());
 		assertThat(request.getValue().bucket()).isEqualTo("ubi-source");
-		assertThat(request.getValue().prefix()).isEqualTo("firehose/processed/2026/11/08/");
+		assertThat(request.getValue().prefix()).isEqualTo("firehose/processed/year=2026/month=11/day=08/");
 	}
 
 	private static S3Object object(String key, long size) {

@@ -10,11 +10,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TelemetryStaticValues {
 
-	// 저장 경로 (2장): firehose/processed/{yyyy}/{MM}/{dd}/{HH}/{파일 이름}.gz
+	// 저장 경로 (2장): firehose/processed/year={yyyy}/month={MM}/day={dd}/hour={HH}/{파일 이름}.gz
 	public static final String TELEMETRY_PROCESSED_ROOT_PREFIX = "firehose/processed/";
-	public static final DateTimeFormatter TELEMETRY_DAY_PATH_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd/");
-	/** 하루 prefix 뒤에 오는 부분: 시각 폴더(00~23) 바로 아래 .gz 파일 */
-	public static final Pattern TELEMETRY_HOURLY_FILE_PATTERN = Pattern.compile("(?:[01]\\d|2[0-3])/[^/]+\\.gz");
+	/** Firehose prefix가 Hive 파티션 형식(year=/month=/day=/hour=)이라 키 이름까지 경로에 들어간다 */
+	public static final DateTimeFormatter TELEMETRY_DAY_PATH_FORMAT = DateTimeFormatter.ofPattern("'year='yyyy/'month='MM/'day='dd/");
+	/** 하루 prefix 뒤에 오는 부분: 시각 폴더(hour=00부터 hour=23까지) 바로 아래 .gz 파일 */
+	public static final Pattern TELEMETRY_HOURLY_FILE_PATTERN = Pattern.compile("hour=(?:[01]\\d|2[0-3])/[^/]+\\.gz");
 
 	// 메시지 형식 (5장)
 	public static final int TELEMETRY_TY_TRIP = 3;

@@ -31,7 +31,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 /** 단위 테스트: S3 API로 버킷을 읽는 공용 클래스. S3Client는 Mock으로 바꾼다 */
 class S3CompatibleBucketTest {
 
-	private static final String PREFIX = "firehose/processed/2026/11/08/";
+	private static final String PREFIX = "firehose/processed/year=2026/month=11/day=08/";
 
 	private final S3Client s3Client = mock(S3Client.class);
 	private final S3CompatibleBucket bucket = new S3CompatibleBucket(s3Client, "raw");
