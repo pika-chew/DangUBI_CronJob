@@ -8,12 +8,23 @@ spring:
     job:
       # 실행할 Job은 --spring.batch.job.name=<jobName> 인자로 고른다.
       enabled: true
-    jdbc:
-      # Spring Batch 메타 테이블(BATCH_*)은 MySQL에 둔다.
-      # 운영은 never: 테이블을 미리 만들어 둔다(spring-batch-core jar의 org/springframework/batch/core/schema-mysql.sql).
-      # 로컬은 application-local.yaml에서 always로 덮어쓴다.
-      initialize-schema: never
-  # 접속 정보는 환경 변수로 받는다: SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD
+  # DB·외부 저장소 접속 정보는 프로필별 파일에 둔다: application-prod.yaml(운영), application-local.yaml(로컬)
   jpa:
     hibernate:
+      # 업무 테이블은 db/trip-schema-mysql.sql로 만든다. 운영은 배포 전에 직접 실행한다.
       ddl-auto: none
+    properties:
+      hibernate:
+        # 시각은 UTC로 저장한다. Instant는 타임존 없는 DATETIME 컬럼에 UTC 값으로 들어간다.
+        jdbc:
+          time_zone: UTC
+        type:
+          preferred_instant_jdbc_type: TIMESTAMP
+
+ubi:
+  batch:
+    ingest:
+      # chunk 하나에 담는 수집 파일 수. chunk마다 커밋된다.
+      # [MEMORY RISK] 이 값만큼의 파일 내용과 엔티티가 커밋 전까지 한꺼번에 힙에 올라간다.
+      #               운영 최대 파일 크기 × 이 값이 힙 한도 안에 들어오는지 장애 테스트로 확인한다. (임시값)
+      chunk-size: 10

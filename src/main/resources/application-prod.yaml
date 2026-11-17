@@ -1,0 +1,30 @@
+# 운영. K8s CronJob에서 SPRING_PROFILES_ACTIVE=prod로 켠다.
+# 값은 모두 환경 변수(Vault → K8s Secret)로 받는다. 목록은 docs/external-storage.md.
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  batch:
+    jdbc:
+      # 메타 테이블(BATCH_*)은 미리 만든다: spring-batch-core jar의 org/springframework/batch/core/schema-mysql.sql
+      initialize-schema: never
+  sql:
+    init:
+      # 업무 테이블은 배포 전에 db/trip-schema-mysql.sql로 직접 만든다.
+      mode: never
+
+# 빈 기본값(':')을 둔다. 해석 못 한 ${...}는 문자열로 남아 Config의 빈 값 검사를 통과하기 때문이다.
+ubi:
+  s3:
+    bucket: ${S3_SOURCE_BUCKET:}
+    region: ${AWS_REGION:}
+  sqs:
+    queue-url: ${SQS_REQUEUE_QUEUE_URL:}
+    region: ${AWS_REGION:}
+  swift:
+    endpoint: ${SWIFT_ENDPOINT:}
+    container: ${SWIFT_CONTAINER:}
+    access-key: ${SWIFT_ACCESS_KEY:}
+    secret-key: ${SWIFT_SECRET_KEY:}
+    region: ${SWIFT_REGION:us-east-1}

@@ -1,0 +1,215 @@
+package com.pikachew.dangUBI.batch.ingest.writer;
+
+import static com.pikachew.dangUBI.domain.trip.model.TripSnapshotFixtures.microtrip;
+import static com.pikachew.dangUBI.domain.trip.model.TripSnapshotFixtures.trip;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Instant;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.pikachew.dangUBI.batch.ingest.dto.ParsedTelemetryFile;
+import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
+import com.pikachew.dangUBI.domain.trip.entity.Trip;
+import com.pikachew.dangUBI.domain.trip.entity.TripMicrotrip;
+import com.pikachew.dangUBI.domain.trip.entity.TripStatus;
+import com.pikachew.dangUBI.domain.trip.model.MicrotripSnapshot;
+import com.pikachew.dangUBI.domain.trip.model.TripSnapshot;
+import com.pikachew.dangUBI.domain.trip.repository.TripMicrotripRepository;
+import com.pikachew.dangUBI.domain.trip.repository.TripRepository;
+
+import jakarta.persistence.EntityManager;
+
+/**
+ * DB 통합 테스트: H2에 운영과 같은 DDL로 테이블을 만들고 Writer의 적재 결과를 확인한다.
+ * write 호출 사이에 flush·clear로 영속성 컨텍스트를 비워, 서로 다른 chunk에서 들어온 것처럼 만든다.
+ */
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional
+class IngestFileWriterTest {
+
+	private static final String V1 = "vehicle-001";
+	private static final String TRIP_START = "2026-11-10T10:00:00Z";
+	private static final String TRIP_END = "2026-11-10T11:00:00Z";
+
+	@Autowired
+	private IngestFileWriter writer;
+
+	@Autowired
+	private DriverRepository driverRepository;
+
+	@Autowired
+	private TripRepository tripRepository;
+
+	@Autowired
+	private TripMicrotripRepository microtripRepository;
+
+	@Autowired
+	private EntityManager entityManager;
+
+	@Test
+	void microtrip만_오면_진행_중인_trip과_운전자를_만든다() {
+		write(List.of(), List.of(
+				microtrip(V1, 354, "m1", "2026-11-10T10:30:00Z"),
+				microtrip(V1, 354, "m2", "2026-11-10T10:00:00Z")));
+
+		Trip trip = findTrip(V1, 354);
+		assertThat(trip.getStatus()).isEqualTo(TripStatus.IN_PROGRESS);
+		assertThat(trip.getFirstCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:00:00Z"));
+		assertThat(trip.getLastCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:30:00Z"));
+		assertThat(trip.getDriver().getVehicleId()).isEqualTo(V1);
+		assertThat(microtripRepository.findByTripOrderByCollectedAt(trip))
+				.extracting(TripMicrotrip::getIdempotencyKey).containsExactly("m2", "m1");
+	}
+
+	@Test
+	void ty3만_오면_종료된_trip을_만든다() {
+		write(List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000)), List.of());
+
+		Trip trip = findTrip(V1, 354);
+		assertThat(trip.getStatus()).isEqualTo(TripStatus.COMPLETED);
+		assertThat(trip.getDistance()).isEqualTo(30000);
+		assertThat(trip.getFirstCollectedAt()).isNull();
+	}
+
+	@Test
+	void microtrip과_ty3_중_어느_쪽이_먼저_와도_결과가_같다() {
+		// 경우 A: microtrip → ty3
+		write(List.of(), List.of(microtrip("vehicle-A", 1, "a1", "2026-11-10T10:30:00Z")));
+		write(List.of(), List.of(microtrip("vehicle-A", 1, "a2", "2026-11-10T10:00:00Z")));
+		write(List.of(trip("vehicle-A", 1, TRIP_START, TRIP_END, 30000)), List.of());
+		// 경우 B: ty3 → microtrip
+		write(List.of(trip("vehicle-B", 1, TRIP_START, TRIP_END, 30000)), List.of());
+		write(List.of(), List.of(microtrip("vehicle-B", 1, "b2", "2026-11-10T10:00:00Z")));
+		write(List.of(), List.of(microtrip("vehicle-B", 1, "b1", "2026-11-10T10:30:00Z")));
+
+		Trip a = findTrip("vehicle-A", 1);
+		Trip b = findTrip("vehicle-B", 1);
+		assertThat(a.getStatus()).isEqualTo(b.getStatus()).isEqualTo(TripStatus.COMPLETED);
+		assertThat(a.getStartedAt()).isEqualTo(b.getStartedAt());
+		assertThat(a.getEndedAt()).isEqualTo(b.getEndedAt());
+		assertThat(a.getDistance()).isEqualTo(b.getDistance());
+		assertThat(a.getFirstCollectedAt()).isEqualTo(b.getFirstCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:00:00Z"));
+		assertThat(a.getLastCollectedAt()).isEqualTo(b.getLastCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:30:00Z"));
+		assertThat(microtripRepository.findByTripOrderByCollectedAt(a)).hasSize(2);
+		assertThat(microtripRepository.findByTripOrderByCollectedAt(b)).hasSize(2);
+	}
+
+	@Test
+	void 같은_파일을_다시_넣어도_결과가_같다() {
+		List<TripSnapshot> trips = List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000));
+		List<MicrotripSnapshot> microtrips = List.of(
+				microtrip(V1, 354, "m1", "2026-11-10T10:00:00Z"),
+				microtrip(V1, 354, "m2", "2026-11-10T10:30:00Z"));
+
+		write(trips, microtrips);
+		write(trips, microtrips);
+
+		assertThat(driverRepository.count()).isEqualTo(1);
+		assertThat(tripRepository.count()).isEqualTo(1);
+		assertThat(microtripRepository.count()).isEqualTo(2);
+		assertThat(findTrip(V1, 354).getStatus()).isEqualTo(TripStatus.COMPLETED);
+	}
+
+	@Test
+	void 한_chunk_안에서_겹치는_microtrip은_하나만_저장한다() {
+		MicrotripSnapshot snapshot = microtrip(V1, 354, "m1", "2026-11-10T10:00:00Z");
+
+		writer.write(new Chunk<>(file("a", List.of(), List.of(snapshot)), file("b", List.of(), List.of(snapshot))));
+		flushAndClear();
+
+		assertThat(microtripRepository.count()).isEqualTo(1);
+	}
+
+	@Test
+	void 대소문자만_다른_idempotencyKey는_다른_microtrip이다() {
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+		write(List.of(), List.of(microtrip(V1, 354, "M1", TRIP_START)));
+
+		assertThat(microtripRepository.count()).isEqualTo(2);
+	}
+
+	@Test
+	void 대소문자만_다른_차량은_다른_운전자와_trip이다() {
+		write(List.of(), List.of(microtrip("Car-1", 354, "m1", TRIP_START)));
+		write(List.of(), List.of(microtrip("car-1", 354, "m2", TRIP_START)));
+
+		assertThat(driverRepository.count()).isEqualTo(2);
+		assertThat(tripRepository.count()).isEqualTo(2);
+		assertThat(findTrip("car-1", 354).getDriver().getVehicleId()).isEqualTo("car-1");
+	}
+
+	@Test
+	void 같은_차량의_여러_trip은_운전자를_공유한다() {
+		write(List.of(trip(V1, 354, TRIP_START, TRIP_END, 1)), List.of(microtrip(V1, 355, "m1", TRIP_END)));
+		write(List.of(), List.of(microtrip(V1, 356, "m2", TRIP_END)));
+
+		assertThat(driverRepository.count()).isEqualTo(1);
+		assertThat(tripRepository.count()).isEqualTo(3);
+	}
+
+	@Test
+	void tid가_같아도_차량이_다르면_다른_trip이다() {
+		write(List.of(), List.of(
+				microtrip("vehicle-001", 354, "m1", TRIP_START),
+				microtrip("vehicle-002", 354, "m2", TRIP_START)));
+
+		assertThat(tripRepository.count()).isEqualTo(2);
+		assertThat(driverRepository.count()).isEqualTo(2);
+	}
+
+	@Test
+	void 다른_차량의_tid와_엇갈려도_정확한_trip에_붙는다() {
+		write(List.of(), List.of(microtrip("vehicle-001", 1, "m1", TRIP_START), microtrip("vehicle-002", 2, "m2", TRIP_START)));
+
+		write(List.of(trip("vehicle-001", 2, TRIP_START, TRIP_END, 7)), List.of());
+
+		assertThat(tripRepository.count()).isEqualTo(3);
+		assertThat(findTrip("vehicle-001", 1).getStatus()).isEqualTo(TripStatus.IN_PROGRESS);
+		assertThat(findTrip("vehicle-002", 2).getStatus()).isEqualTo(TripStatus.IN_PROGRESS);
+		assertThat(findTrip("vehicle-001", 2).getDistance()).isEqualTo(7);
+	}
+
+	@Test
+	void 시각은_밀리초까지_UTC_그대로_저장된다() {
+		write(List.of(), List.of(microtrip(V1, 354, "m1", "2026-11-10T23:59:59.123Z")));
+
+		assertThat(findTrip(V1, 354).getLastCollectedAt()).isEqualTo(Instant.parse("2026-11-10T23:59:59.123Z"));
+	}
+
+	@Test
+	void 생성_수정_시각이_채워진다() {
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+
+		Trip trip = findTrip(V1, 354);
+		assertThat(trip.getCreatedAt()).isNotNull();
+		assertThat(trip.getUpdatedAt()).isNotNull();
+		assertThat(trip.getDriver().getCreatedAt()).isNotNull();
+	}
+
+	private void write(List<TripSnapshot> trips, List<MicrotripSnapshot> microtrips) {
+		writer.write(new Chunk<>(file("f", trips, microtrips)));
+		flushAndClear();
+	}
+
+	private void flushAndClear() {
+		entityManager.flush();
+		entityManager.clear();
+	}
+
+	private static ParsedTelemetryFile file(String name, List<TripSnapshot> trips, List<MicrotripSnapshot> microtrips) {
+		return new ParsedTelemetryFile("firehose/processed/2026/11/10/03/" + name + ".jsonl.gz", trips, microtrips, 0);
+	}
+
+	private Trip findTrip(String vehicleId, int tid) {
+		return tripRepository.findByVehicleIdAndTid(vehicleId, tid).orElseThrow();
+	}
+
+}

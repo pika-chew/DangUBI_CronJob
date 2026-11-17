@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Claude Code 개인 설정
+.claude/settings.local.json
