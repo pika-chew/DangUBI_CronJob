@@ -21,8 +21,14 @@ import org.springframework.stereotype.Component;
 import com.pikachew.dangUBI.batch.ingest.dto.ParsedTelemetryFile;
 import com.pikachew.dangUBI.domain.driver.entity.Driver;
 import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
+import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
+import com.pikachew.dangUBI.domain.outbox.entity.OutboxAggregateType;
+import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
+import com.pikachew.dangUBI.domain.outbox.model.TripOutboxPayload;
+import com.pikachew.dangUBI.domain.outbox.repository.OutboxRepository;
 import com.pikachew.dangUBI.domain.trip.entity.Trip;
 import com.pikachew.dangUBI.domain.trip.entity.TripMicrotrip;
+import com.pikachew.dangUBI.domain.trip.entity.TripStatus;
 import com.pikachew.dangUBI.domain.trip.model.MicrotripSnapshot;
 import com.pikachew.dangUBI.domain.trip.model.TripSnapshot;
 import com.pikachew.dangUBI.domain.trip.repository.TripMicrotripRepository;
@@ -30,6 +36,7 @@ import com.pikachew.dangUBI.domain.trip.repository.TripRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * ingestJob의 Writer: 파일 여러 개(chunk)의 trip·microtrip을 MySQL에 적재한다 (docs/ingest-spec.md 6장 "trip 정제").
@@ -39,6 +46,8 @@ import lombok.extern.slf4j.Slf4j;
  * 2. trip: 필요한 (vehicleId, tid)를 조회하고, 없는 운전자와 trip을 만든다.
  * 3. 새 microtrip을 저장하고 trip의 수집 범위를 넓힌다.
  * 4. ty=3으로 trip을 종료한다.
+ * 5. 새로 만든 trip은 TRIP_STARTED, IN_PROGRESS에서 종료된 trip은 TRIP_COMPLETED를 outbox에 남긴다.
+ *    trip 저장과 같은 chunk 트랜잭션이라 함께 커밋·롤백된다. 이미 종료된 trip의 ty=3을 다시 받으면 남기지 않는다.
  * 두 메시지가 trip의 서로 다른 컬럼만 고치므로 순서와 상관없이, 다시 넣어도 결과가 같다.
  *
  * TODO: 두 실행이 같은 trip을 동시에 처음 만들면 유니크 충돌로 chunk가 실패한다. 지금은 CronJob 동시 실행 금지로 막는다.
@@ -62,6 +71,8 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 	private final DriverRepository driverRepository;
 	private final TripRepository tripRepository;
 	private final TripMicrotripRepository microtripRepository;
+	private final OutboxRepository outboxRepository;
+	private final JsonMapper jsonMapper;
 
 	@Override
 	public void write(Chunk<? extends ParsedTelemetryFile> chunk) {
@@ -89,15 +100,20 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 		Set<String> missingDrivers = new LinkedHashSet<>(vehicleIds);
 		missingDrivers.removeAll(drivers.keySet());
 		drivers.putAll(createDrivers(missingDrivers));
-		trips.putAll(createTrips(missingTrips, drivers));
+		Map<TripKey, Trip> createdTrips = createTrips(missingTrips, drivers);
+		trips.putAll(createdTrips);
 
 		saveMicrotrips(newMicrotrips, trips);
 		recordCollectedAt(newMicrotrips, trips);
+		List<Trip> completingTrips = selectInProgressTrips(tripSnapshots, trips);
 		completeTrips(tripSnapshots, trips);
 
-		log.info("ingest chunk: 파일 {}개, microtrip 저장 {}건·중복 {}건, trip 종료 {}건, 새 trip {}건, 건너뛴 줄 {}줄",
+		saveOutboxes(OutboxEventType.TRIP_STARTED, createdTrips.values());
+		saveOutboxes(OutboxEventType.TRIP_COMPLETED, completingTrips);
+
+		log.info("ingest chunk: 파일 {}개, microtrip 저장 {}건·중복 {}건, trip 종료 {}건(새로 종료 {}건), 새 trip {}건, 건너뛴 줄 {}줄",
 				chunk.size(), newMicrotrips.size(), microtripSnapshots.size() - newMicrotrips.size(),
-				tripSnapshots.size(), missingTrips.size(), skippedLines);
+				tripSnapshots.size(), completingTrips.size(), missingTrips.size(), skippedLines);
 	}
 
 	/** 같은 idempotencyKey가 여러 번 있으면 처음 것만 남긴다 */
@@ -181,8 +197,31 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 				trips.get(new TripKey(snapshot.vehicleId(), snapshot.tid())).recordCollectedAt(snapshot.collectedAt()));
 	}
 
+	/** ty=3을 받은 trip 중 아직 진행 중인 것. 같은 trip의 ty=3이 여러 번 있어도 한 번만 담는다 */
+	private static List<Trip> selectInProgressTrips(List<TripSnapshot> snapshots, Map<TripKey, Trip> trips) {
+		Set<Trip> inProgress = new LinkedHashSet<>();
+		snapshots.stream()
+				.map(snapshot -> trips.get(new TripKey(snapshot.vehicleId(), snapshot.tid())))
+				.filter(trip -> trip.getStatus() == TripStatus.IN_PROGRESS)
+				.forEach(inProgress::add);
+		return new ArrayList<>(inProgress);
+	}
+
 	private static void completeTrips(List<TripSnapshot> snapshots, Map<TripKey, Trip> trips) {
 		snapshots.forEach(snapshot -> trips.get(new TripKey(snapshot.vehicleId(), snapshot.tid())).complete(snapshot));
+	}
+
+	private void saveOutboxes(OutboxEventType eventType, Collection<Trip> trips) {
+		List<Outbox> outboxes = trips.stream()
+				.map(trip -> Outbox.builder()
+						.aggregateType(OutboxAggregateType.TRIP)
+						.aggregateId(trip.getId())
+						.eventType(eventType)
+						.payload(jsonMapper.writeValueAsString(
+								new TripOutboxPayload(trip.getId(), trip.getDriver().getId(), trip.getVehicleId(), trip.getTid())))
+						.build())
+				.toList();
+		outboxRepository.saveAll(outboxes);
 	}
 
 	private static TripMicrotrip toMicrotrip(Trip trip, MicrotripSnapshot snapshot) {
