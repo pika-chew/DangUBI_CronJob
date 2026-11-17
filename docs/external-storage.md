@@ -1,4 +1,4 @@
-# 외부 저장소 연동 (운영)
+# 외부 저장소 연동 (운영, prod 프로필)
 
 reconcileJob과 ingestJob이 쓰는 외부 시스템과 접속 설정. local 프로필은 [local-run.md](local-run.md)를 본다.
 
@@ -12,10 +12,14 @@ S3와 Swift는 같은 키를 쓰고(ingest-spec.md 2장), 목록 조회와 내�
 
 ## 환경 변수
 
-비어 있으면 앱이 뜰 때 실패한다.
+설정 파일은 `application-prod.yaml`이다. 비어 있으면 앱이 뜰 때 실패한다.
 
 | 환경 변수 | 설정 키 | 설명 |
 | --- | --- | --- |
+| `SPRING_PROFILES_ACTIVE` | | `prod` |
+| `SPRING_DATASOURCE_URL` | `spring.datasource.url` | 예: `jdbc:mysql://<host>:3306/ubi` |
+| `SPRING_DATASOURCE_USERNAME` | `spring.datasource.username` | |
+| `SPRING_DATASOURCE_PASSWORD` | `spring.datasource.password` | |
 | `S3_SOURCE_BUCKET` | `ubi.s3.bucket` | Firehose가 쓰는 원본 버킷 |
 | `AWS_REGION` | `ubi.s3.region`, `ubi.sqs.region` | 원본 버킷·큐 리전. 예: `ap-northeast-2` |
 | `AWS_ACCESS_KEY_ID` | (SDK가 직접 읽음) | IAM 사용자 액세스 키 |
