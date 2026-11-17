@@ -34,11 +34,11 @@ class SwiftClientImplTest {
 	@Test
 	void 설정한_컨테이너에서_목록을_읽어_Swift_객체로_돌려준다() {
 		given(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).willReturn(ListObjectsV2Response.builder()
-				.contents(S3Object.builder().key("firehose/processed/2026/11/08/03/a.jsonl.gz").size(10L).build())
+				.contents(S3Object.builder().key("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz").size(10L).build())
 				.isTruncated(false).build());
 
-		assertThat(client.listObjects("firehose/processed/2026/11/08/"))
-				.containsExactly(new SwiftObject("firehose/processed/2026/11/08/03/a.jsonl.gz", 10));
+		assertThat(client.listObjects("firehose/processed/year=2026/month=11/day=08/"))
+				.containsExactly(new SwiftObject("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", 10));
 		ArgumentCaptor<ListObjectsV2Request> request = ArgumentCaptor.forClass(ListObjectsV2Request.class);
 		verify(s3Client).listObjectsV2(request.capture());
 		assertThat(request.getValue().bucket()).isEqualTo("ubi-raw");
@@ -49,7 +49,7 @@ class SwiftClientImplTest {
 		given(s3Client.getObject(any(GetObjectRequest.class))).willReturn(new ResponseInputStream<>(
 				GetObjectResponse.builder().build(), AbortableInputStream.create(new ByteArrayInputStream(new byte[] {1, 2}))));
 
-		try (InputStream in = client.download("firehose/processed/2026/11/08/03/a.jsonl.gz")) {
+		try (InputStream in = client.download("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz")) {
 			assertThat(in.readAllBytes()).containsExactly(1, 2);
 		}
 		ArgumentCaptor<GetObjectRequest> request = ArgumentCaptor.forClass(GetObjectRequest.class);

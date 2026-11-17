@@ -16,8 +16,8 @@ class LocalRequeuePublisherTest {
 	@Test
 	void 받은_누락_객체_수를_그대로_재큐잉_건수로_돌려준다() {
 		List<ObjectRef> missing = List.of(
-				new ObjectRef("firehose/processed/2026/11/08/03/a.jsonl.gz", 1),
-				new ObjectRef("firehose/processed/2026/11/08/14/b.jsonl.gz", 2));
+				new ObjectRef("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", 1),
+				new ObjectRef("firehose/processed/year=2026/month=11/day=08/hour=14/b.jsonl.gz", 2));
 
 		assertThat(publisher.publish(missing)).isEqualTo(2);
 	}

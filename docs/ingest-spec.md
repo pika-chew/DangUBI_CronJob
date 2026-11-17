@@ -13,11 +13,11 @@ S3 → Swift → MySQL로 이어지는 수집 데이터의 저장 경로, 파일
 ## 2. 저장 경로
 
 ```
-s3://{bucket}/firehose/processed/{yyyy}/{MM}/{dd}/{HH}/{파일 이름}.jsonl.gz
-swift://{container}/firehose/processed/{yyyy}/{MM}/{dd}/{HH}/{파일 이름}.jsonl.gz   ← S3 키 그대로
+s3://{bucket}/firehose/processed/year={yyyy}/month={MM}/day={dd}/hour={HH}/{파일 이름}.jsonl.gz
+swift://{container}/firehose/processed/year={yyyy}/month={MM}/day={dd}/hour={HH}/{파일 이름}.jsonl.gz   ← S3 키 그대로
 ```
 
-- `{yyyy}/{MM}/{dd}/{HH}`는 Firehose가 레코드를 받은 시각(UTC)이다. 단말기 시각(`clt`, `stt` 등)과 다를 수 있다.
+- `year={yyyy}/month={MM}/day={dd}/hour={HH}`는 Firehose가 레코드를 받은 시각(UTC)이다. 단말기 시각(`clt`, `stt` 등)과 다를 수 있다.
 - 한 파일에 ty=3(trip)과 ty=4(microtrip)가 섞여 있을 수 있다. 차량·trip별로 파일을 나누지 않는다.
 - 버킷·컨테이너 이름은 환경 설정으로 주입하고 코드에 넣지 않는다.
 
@@ -36,7 +36,7 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 | 항목 | 값 |
 | --- | --- |
 | Dynamic partitioning | 끔 |
-| S3 bucket prefix | `firehose/processed/!{timestamp:yyyy/MM/dd/HH}/` |
+| S3 bucket prefix | `firehose/processed/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/` |
 | S3 bucket error output prefix | `firehose/errors/!{firehose:error-output-type}/!{timestamp:yyyy/MM/dd/HH}/` |
 | Compression | GZIP |
 | File extension format | `.jsonl.gz` |

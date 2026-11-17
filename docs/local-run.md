@@ -16,8 +16,8 @@ S3·Swift·SQS 없이 reconcileJob과 ingestJob을 로컬에서 돌린다. local
 
 ```
 {root}/
-├── s3/firehose/processed/{yyyy}/{MM}/{dd}/{HH}/{파일 이름}.jsonl.gz
-└── swift/firehose/processed/{yyyy}/{MM}/{dd}/{HH}/{파일 이름}.jsonl.gz
+├── s3/firehose/processed/year={yyyy}/month={MM}/day={dd}/hour={HH}/{파일 이름}.jsonl.gz
+└── swift/firehose/processed/year={yyyy}/month={MM}/day={dd}/hour={HH}/{파일 이름}.jsonl.gz
 ```
 
 `{root}`는 `application-local.yaml`의 `ubi.local-storage.root`다. 기본값은 레포 옆 `../local-storage`이고, 환경 변수 `UBI_LOCAL_STORAGE_ROOT`로 바꿀 수 있다.
@@ -44,7 +44,7 @@ S3·Swift·SQS 없이 reconcileJob과 ingestJob을 로컬에서 돌린다. local
    ./gradlew bootRun --args='--spring.profiles.active=local --spring.batch.job.name=reconcileJob targetDate=2026-11-08'
    ```
 
-   기대 로그: `S3 3건, Swift 2건, 누락 1건`, `[local] 재큐잉 대상: firehose/processed/2026/11/08/14/sample-c.jsonl.gz`
+   기대 로그: `S3 3건, Swift 2건, 누락 1건`, `[local] 재큐잉 대상: firehose/processed/year=2026/month=11/day=08/hour=14/sample-c.jsonl.gz`
 
 4. ingestJob을 실행한다.
 
