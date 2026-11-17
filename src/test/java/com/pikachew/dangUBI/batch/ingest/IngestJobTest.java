@@ -39,6 +39,9 @@ import com.pikachew.dangUBI.common.consts.IngestStaticValues;
 import com.pikachew.dangUBI.common.exception.ErrorStatus;
 import com.pikachew.dangUBI.common.exception.GeneralException;
 import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
+import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
+import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
+import com.pikachew.dangUBI.domain.outbox.repository.OutboxRepository;
 import com.pikachew.dangUBI.domain.trip.entity.TripStatus;
 import com.pikachew.dangUBI.domain.trip.repository.TripMicrotripRepository;
 import com.pikachew.dangUBI.domain.trip.repository.TripRepository;
@@ -72,6 +75,9 @@ class IngestJobTest {
 	@Autowired
 	private TripMicrotripRepository microtripRepository;
 
+	@Autowired
+	private OutboxRepository outboxRepository;
+
 	@MockitoBean
 	private TelemetryFileReader telemetryFileReader;
 
@@ -88,6 +94,7 @@ class IngestJobTest {
 	@AfterEach
 	void cleanUp() {
 		jobRepositoryTestUtils.removeJobExecutions();
+		outboxRepository.deleteAllInBatch();
 		microtripRepository.deleteAllInBatch();
 		tripRepository.deleteAllInBatch();
 		driverRepository.deleteAllInBatch();
@@ -107,6 +114,8 @@ class IngestJobTest {
 		assertThat(microtripRepository.count()).isEqualTo(1);
 		assertThat(tripRepository.findByVehicleIdAndTid("vehicle-001", 354).orElseThrow().getStatus())
 				.isEqualTo(TripStatus.COMPLETED);
+		assertThat(outboxRepository.findAll()).extracting(Outbox::getEventType)
+				.containsExactlyInAnyOrder(OutboxEventType.TRIP_STARTED, OutboxEventType.TRIP_COMPLETED);
 	}
 
 	@Test
@@ -122,6 +131,7 @@ class IngestJobTest {
 		assertThat(driverRepository.count()).isEqualTo(1);
 		assertThat(tripRepository.count()).isEqualTo(1);
 		assertThat(microtripRepository.count()).isEqualTo(1);
+		assertThat(outboxRepository.count()).isEqualTo(2);
 	}
 
 	@Test
