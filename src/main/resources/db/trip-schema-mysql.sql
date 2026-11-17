@@ -79,3 +79,20 @@ CREATE TABLE IF NOT EXISTS trip_microtrip (
     CONSTRAINT fk_trip_microtrip_trip FOREIGN KEY (trip_id) REFERENCES trip (id),
     INDEX idx_trip_microtrip_trip_id_collected_at (trip_id, collected_at)
 );
+
+-- 적재와 같은 트랜잭션에서 남기는 발행 대기 이벤트. 발행은 별도 relay가 PENDING 행을 id 순서로 읽어 한다.
+-- 같은 대상의 같은 이벤트는 한 번만 남긴다 (uk_outbox_aggregate_event).
+CREATE TABLE IF NOT EXISTS outbox (
+    id              BIGINT         NOT NULL AUTO_INCREMENT,
+    aggregate_type  VARCHAR(32)    NOT NULL,
+    aggregate_id    BIGINT         NOT NULL,
+    event_type      VARCHAR(32)    NOT NULL,
+    payload         VARCHAR(1024)  NOT NULL,
+    status          VARCHAR(16)    NOT NULL,
+    published_at    DATETIME(3)    NULL,
+    created_at      DATETIME(3)    NOT NULL,
+    updated_at      DATETIME(3)    NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_outbox_aggregate_event UNIQUE (aggregate_type, aggregate_id, event_type),
+    INDEX idx_outbox_status_id (status, id)
+);
