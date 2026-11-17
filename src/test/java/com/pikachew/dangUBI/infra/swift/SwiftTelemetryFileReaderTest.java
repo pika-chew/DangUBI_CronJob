@@ -26,22 +26,22 @@ class SwiftTelemetryFileReaderTest {
 
 	@Test
 	void 그날_prefix로_조회해_적재_대상만_키_순서로_돌려준다() {
-		given(swiftClient.listObjects("firehose/processed/2026/11/10/")).willReturn(List.of(
-				new SwiftObject("firehose/processed/2026/11/10/05/b.jsonl.gz", 10),
-				new SwiftObject("firehose/processed/2026/11/10/03/a.jsonl.gz", 10),
-				new SwiftObject("firehose/processed/2026/11/10/03/readme.txt", 10),
-				new SwiftObject("firehose/processed/2026/11/10/03/", 0)));
+		given(swiftClient.listObjects("firehose/processed/year=2026/month=11/day=10/")).willReturn(List.of(
+				new SwiftObject("firehose/processed/year=2026/month=11/day=10/hour=05/b.jsonl.gz", 10),
+				new SwiftObject("firehose/processed/year=2026/month=11/day=10/hour=03/a.jsonl.gz", 10),
+				new SwiftObject("firehose/processed/year=2026/month=11/day=10/hour=03/readme.txt", 10),
+				new SwiftObject("firehose/processed/year=2026/month=11/day=10/hour=03/", 0)));
 
 		List<String> files = reader.listFiles(DAY);
 
 		assertThat(files).containsExactly(
-				"firehose/processed/2026/11/10/03/a.jsonl.gz",
-				"firehose/processed/2026/11/10/05/b.jsonl.gz");
+				"firehose/processed/year=2026/month=11/day=10/hour=03/a.jsonl.gz",
+				"firehose/processed/year=2026/month=11/day=10/hour=05/b.jsonl.gz");
 	}
 
 	@Test
 	void 파일을_내려받아_해석하고_스트림을_닫는다() {
-		String key = "firehose/processed/2026/11/10/03/a.jsonl.gz";
+		String key = "firehose/processed/year=2026/month=11/day=10/hour=03/a.jsonl.gz";
 		AtomicBoolean closed = new AtomicBoolean(false);
 		InputStream content = gzip(MICROTRIP_LINE);
 		given(swiftClient.download(key)).willReturn(new InputStream() {

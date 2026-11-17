@@ -38,3 +38,6 @@ out/
 
 # Claude Code 개인 설정
 .claude/settings.local.json
+
+#.env
+.env

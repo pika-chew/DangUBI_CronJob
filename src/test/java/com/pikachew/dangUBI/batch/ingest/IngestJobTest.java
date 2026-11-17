@@ -54,8 +54,8 @@ import com.pikachew.dangUBI.infra.swift.TelemetryFileFormatException;
 class IngestJobTest {
 
 	private static final String DATE = "2026-11-10";
-	private static final String FILE_A = "firehose/processed/2026/11/10/03/a.jsonl.gz";
-	private static final String FILE_B = "firehose/processed/2026/11/10/04/b.jsonl.gz";
+	private static final String FILE_A = "firehose/processed/year=2026/month=11/day=10/hour=03/a.jsonl.gz";
+	private static final String FILE_B = "firehose/processed/year=2026/month=11/day=10/hour=04/b.jsonl.gz";
 
 	@Autowired
 	private JobOperatorTestUtils jobOperatorTestUtils;

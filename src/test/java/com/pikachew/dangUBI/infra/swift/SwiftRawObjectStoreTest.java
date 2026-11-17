@@ -19,14 +19,14 @@ class SwiftRawObjectStoreTest {
 
 	@Test
 	void 그날_prefix로_조회해_수집_파일만_이름과_크기로_돌려준다() {
-		given(swiftClient.listObjects("firehose/processed/2026/11/08/")).willReturn(List.of(
-				new SwiftObject("firehose/processed/2026/11/08/03/a.jsonl.gz", 120),
-				new SwiftObject("firehose/processed/2026/11/08/03/readme.txt", 5),
-				new SwiftObject("firehose/processed/2026/11/08/03/", 0)));
+		given(swiftClient.listObjects("firehose/processed/year=2026/month=11/day=08/")).willReturn(List.of(
+				new SwiftObject("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", 120),
+				new SwiftObject("firehose/processed/year=2026/month=11/day=08/hour=03/readme.txt", 5),
+				new SwiftObject("firehose/processed/year=2026/month=11/day=08/hour=03/", 0)));
 
 		List<ObjectRef> objects = store.listObjects(LocalDate.parse("2026-11-08"));
 
-		assertThat(objects).containsExactly(new ObjectRef("firehose/processed/2026/11/08/03/a.jsonl.gz", 120));
+		assertThat(objects).containsExactly(new ObjectRef("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", 120));
 	}
 
 }

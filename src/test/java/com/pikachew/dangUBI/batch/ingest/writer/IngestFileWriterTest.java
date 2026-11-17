@@ -205,7 +205,7 @@ class IngestFileWriterTest {
 	}
 
 	private static ParsedTelemetryFile file(String name, List<TripSnapshot> trips, List<MicrotripSnapshot> microtrips) {
-		return new ParsedTelemetryFile("firehose/processed/2026/11/10/03/" + name + ".jsonl.gz", trips, microtrips, 0);
+		return new ParsedTelemetryFile("firehose/processed/year=2026/month=11/day=10/hour=03/" + name + ".jsonl.gz", trips, microtrips, 0);
 	}
 
 	private Trip findTrip(String vehicleId, int tid) {

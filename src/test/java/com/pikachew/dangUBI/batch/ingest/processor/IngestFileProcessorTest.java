@@ -19,7 +19,7 @@ import com.pikachew.dangUBI.infra.swift.TelemetryFileFormatException;
 /** 단위 테스트: 수집 파일 키 하나를 처리하는 Processor. 포트는 Mock으로 바꾼다 */
 class IngestFileProcessorTest {
 
-	private static final String KEY = "firehose/processed/2026/11/10/03/a.jsonl.gz";
+	private static final String KEY = "firehose/processed/year=2026/month=11/day=10/hour=03/a.jsonl.gz";
 
 	private final TelemetryFileReader telemetryFileReader = mock(TelemetryFileReader.class);
 	private final IngestFileProcessor processor = new IngestFileProcessor(telemetryFileReader);

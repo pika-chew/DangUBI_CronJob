@@ -9,14 +9,14 @@ import java.time.LocalDate;
 /**
  * 수집 파일의 저장 경로 규칙. S3와 Swift가 같은 키를 쓴다 (docs/ingest-spec.md 2장).
  *
- * <pre>firehose/processed/{yyyy}/{MM}/{dd}/{HH}/{파일 이름}.gz   (날짜·시각은 Firehose 수신 시각, UTC)</pre>
+ * <pre>firehose/processed/year={yyyy}/month={MM}/day={dd}/hour={HH}/{파일 이름}.gz   (날짜·시각은 Firehose 수신 시각, UTC)</pre>
  */
 public final class TelemetryObjectKeys {
 
 	private TelemetryObjectKeys() {
 	}
 
-	/** 하루치 파일이 들어 있는 prefix. 예: firehose/processed/2026/11/10/ */
+	/** 하루치 파일이 들어 있는 prefix. 예: firehose/processed/year=2026/month=11/day=10/ */
 	public static String dayPrefix(LocalDate date) {
 		return TELEMETRY_PROCESSED_ROOT_PREFIX + date.format(TELEMETRY_DAY_PATH_FORMAT);
 	}

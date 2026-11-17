@@ -30,18 +30,18 @@ class LocalSwiftClientTest {
 
 	@Test
 	void swift_디렉터리_아래_파일만_Swift_객체로_돌려준다() throws IOException {
-		write("swift/firehose/processed/2026/11/08/03/a.jsonl.gz", "abc");
-		write("s3/firehose/processed/2026/11/08/03/b.jsonl.gz", "b");
+		write("swift/firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", "abc");
+		write("s3/firehose/processed/year=2026/month=11/day=08/hour=03/b.jsonl.gz", "b");
 
-		assertThat(client.listObjects("firehose/processed/2026/11/08/"))
-				.containsExactly(new SwiftObject("firehose/processed/2026/11/08/03/a.jsonl.gz", 3));
+		assertThat(client.listObjects("firehose/processed/year=2026/month=11/day=08/"))
+				.containsExactly(new SwiftObject("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", 3));
 	}
 
 	@Test
 	void 키로_swift_디렉터리의_파일을_연다() throws IOException {
-		write("swift/firehose/processed/2026/11/08/03/a.jsonl.gz", "content");
+		write("swift/firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz", "content");
 
-		try (InputStream in = client.download("firehose/processed/2026/11/08/03/a.jsonl.gz")) {
+		try (InputStream in = client.download("firehose/processed/year=2026/month=11/day=08/hour=03/a.jsonl.gz")) {
 			assertThat(new String(in.readAllBytes(), StandardCharsets.UTF_8)).isEqualTo("content");
 		}
 	}
