@@ -65,7 +65,16 @@ public class TelemetryJsonlParserTest {
 		assertThat(microtrip.tid()).isEqualTo(354);
 		assertThat(microtrip.collectedAt()).isEqualTo(Instant.ofEpochMilli(1793575800000L));
 		assertThat(microtrip.speed()).isEqualTo(70);
-		assertThat(microtrip.lat()).isNull();
+		assertThat(microtrip.eventMask()).isEqualTo(0x28);
+	}
+
+	@Test
+	void 점수에_쓰지_않는_microtrip_필드는_읽지_않는다() {
+		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(
+				microtripPld("\"sp\":70,\"lat\":37.5665,\"vv\":12.6,\"xyz\":\"0.12,-0.05,0.98\",\"rpm\":2000"));
+
+		assertThat(microtrip.speed()).isEqualTo(70);
+		assertThat(microtrip.toString()).doesNotContain("37.5665", "12.6", "0.98", "2000");
 	}
 
 	@Test
@@ -93,24 +102,6 @@ public class TelemetryJsonlParserTest {
 	}
 
 	@Test
-	void xyz는_쉼표로_나눠_세_값으로_해석한다() {
-		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"xyz\":\"12,-3, 7\""));
-
-		assertThat(microtrip.accX()).isEqualTo(12);
-		assertThat(microtrip.accY()).isEqualTo(-3);
-		assertThat(microtrip.gyroY()).isEqualTo(7);
-	}
-
-	@Test
-	void xyz_형식이_틀리면_세_값이_모두_null이다() {
-		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"xyz\":\"12,abc,7\""));
-
-		assertThat(microtrip.accX()).isNull();
-		assertThat(microtrip.accY()).isNull();
-		assertThat(microtrip.gyroY()).isNull();
-	}
-
-	@Test
 	void 숫자_문자열도_숫자로_받는다() {
 		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"sp\":\"72\""));
 
@@ -119,10 +110,10 @@ public class TelemetryJsonlParserTest {
 
 	@Test
 	void 선택_필드_형식이_틀리면_그_필드만_null이다() {
-		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"sp\":\"fast\",\"rpm\":2000"));
+		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"sp\":\"fast\",\"em\":\"28\""));
 
 		assertThat(microtrip.speed()).isNull();
-		assertThat(microtrip.rpm()).isEqualTo(2000);
+		assertThat(microtrip.eventMask()).isEqualTo(0x28);
 	}
 
 	@Test

@@ -52,27 +52,16 @@ CREATE TABLE IF NOT EXISTS trip (
     INDEX idx_trip_driver_id_started_at (driver_id, started_at)
 );
 
+-- 점수 계산에 쓰는 값(clt, sp, em)만 저장한다. 나머지 필드는 Swift 원본에만 남는다 (docs/ingest-spec.md 6장).
 CREATE TABLE IF NOT EXISTS trip_microtrip (
     id                     BIGINT        NOT NULL AUTO_INCREMENT,
     trip_id                BIGINT        NOT NULL,
     idempotency_key        VARCHAR(128)  COLLATE utf8mb4_bin  NOT NULL,
     collected_at           DATETIME(3)   NOT NULL,
     received_at            DATETIME(3)   NULL,
-    lat                    INT           NULL,
-    lon                    INT           NULL,
-    location_accuracy      INT           NULL,
-    fuel_consumption       INT           NULL,
-    trip_distance          INT           NULL,
-    rpm                    INT           NULL,
     speed                  INT           NULL,
     event_mask             SMALLINT      NULL,
-    engine_load            INT           NULL,
-    acc_x                  INT           NULL,
-    acc_y                  INT           NULL,
-    gyro_y                 INT           NULL,
-    battery_voltage        INT           NULL,
-    accel_pedal_position   INT           NULL,
-    created_at             DATETIME(3)   NOT NULL,
+    created_at            DATETIME(3)   NOT NULL,
     updated_at             DATETIME(3)   NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT uk_trip_microtrip_idempotency_key UNIQUE (idempotency_key),

@@ -16,7 +16,7 @@ public final class TripSnapshotFixtures {
 
 	public static MicrotripSnapshot microtrip(String vehicleId, int tid, String idempotencyKey, String collectedAt) {
 		return new MicrotripSnapshot(vehicleId, idempotencyKey, Instant.parse(collectedAt), tid, Instant.parse(collectedAt),
-				null, null, null, null, null, null, 70, 0x28, null, null, null, null, null, null);
+				70, 0x28);
 	}
 
 }

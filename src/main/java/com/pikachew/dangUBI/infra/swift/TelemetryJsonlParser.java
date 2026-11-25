@@ -4,8 +4,6 @@ import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_SUPPORTED_SCHEMA_VERSION;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_TY_MICROTRIP;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_TY_TRIP;
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_XYZ_DELIMITER;
-import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_XYZ_SIZE;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -148,20 +146,9 @@ public final class TelemetryJsonlParser {
 					fields.integer(pld, "dtvt"));
 			case TELEMETRY_TY_MICROTRIP -> {
 				Instant collectedAt = Instant.ofEpochMilli(requiredLong(pld, "clt"));
-				Integer[] xyz = fields.xyz(pld);
 				yield new MicrotripSnapshot(vehicleId, idempotencyKey, receivedAt, tid, collectedAt,
-						fields.integer(pld, "lat"),
-						fields.integer(pld, "lon"),
-						fields.integer(pld, "lc"),
-						fields.integer(pld, "fc"),
-						fields.integer(pld, "cdit"),
-						fields.integer(pld, "rpm"),
 						fields.integer(pld, "sp"),
-						fields.eventMask(pld),
-						fields.integer(pld, "el"),
-						xyz[0], xyz[1], xyz[2],
-						fields.integer(pld, "vv"),
-						fields.integer(pld, "tpos"));
+						fields.eventMask(pld));
 			}
 			default -> throw new InvalidTelemetryLineException("지원하지 않는 ty: " + ty);
 		};
@@ -224,34 +211,6 @@ public final class TelemetryJsonlParser {
 				return invalid("em", node);
 			}
 			return Integer.parseInt(text, 16);
-		}
-
-		/** xyz: 세 값이 모두 정수가 아니면 셋 다 null이다 */
-		Integer[] xyz(JsonNode parent) {
-			Integer[] empty = new Integer[TELEMETRY_XYZ_SIZE];
-			JsonNode node = parent.get("xyz");
-			if (JsonNodeUtils.isAbsent(node)) {
-				return empty;
-			}
-			if (!node.isString()) {
-				invalid("xyz", node);
-				return empty;
-			}
-			String[] parts = node.stringValue().split(TELEMETRY_XYZ_DELIMITER, -1);
-			if (parts.length != TELEMETRY_XYZ_SIZE) {
-				invalid("xyz", node);
-				return empty;
-			}
-			Integer[] values = new Integer[TELEMETRY_XYZ_SIZE];
-			for (int i = 0; i < TELEMETRY_XYZ_SIZE; i++) {
-				try {
-					values[i] = Integer.parseInt(parts[i].trim());
-				} catch (NumberFormatException e) {
-					invalid("xyz", node);
-					return empty;
-				}
-			}
-			return values;
 		}
 
 		private <T> T invalid(String name, JsonNode node) {

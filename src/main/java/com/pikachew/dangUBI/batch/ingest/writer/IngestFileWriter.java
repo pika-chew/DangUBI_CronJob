@@ -230,20 +230,8 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 				.idempotencyKey(snapshot.idempotencyKey())
 				.collectedAt(snapshot.collectedAt())
 				.receivedAt(snapshot.receivedAt())
-				.lat(snapshot.lat())
-				.lon(snapshot.lon())
-				.locationAccuracy(snapshot.locationAccuracy())
-				.fuelConsumption(snapshot.fuelConsumption())
-				.tripDistance(snapshot.tripDistance())
-				.rpm(snapshot.rpm())
 				.speed(snapshot.speed())
 				.eventMask(snapshot.eventMask() == null ? null : snapshot.eventMask().shortValue())
-				.engineLoad(snapshot.engineLoad())
-				.accX(snapshot.accX())
-				.accY(snapshot.accY())
-				.gyroY(snapshot.gyroY())
-				.batteryVoltage(snapshot.batteryVoltage())
-				.accelPedalPosition(snapshot.accelPedalPosition())
 				.build();
 	}
 
