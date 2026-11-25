@@ -27,4 +27,13 @@ public final class ScoreStaticValues {
 	/** 야간 시간대와 하루 리포트 날짜의 기준 */
 	public static final ZoneId SCORE_ZONE = ZoneId.of("Asia/Seoul");
 
+	// 점수 (6장)
+	public static final double SCORE_MAX = 100.0;
+	public static final double SCORE_MIN = 0.0;
+
+	// 설정 (application.yaml)
+	public static final String SCORE_PROPERTY_PREFIX = "ubi.batch.score";
+	/** scoreBasis 파라미터가 없을 때 쓰는 운영 기준 이름 */
+	public static final String SCORE_DEFAULT_BASIS = "standard";
+
 }
