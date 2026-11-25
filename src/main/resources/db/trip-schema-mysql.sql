@@ -95,9 +95,38 @@ CREATE TABLE IF NOT EXISTS score_segment (
     CONSTRAINT fk_score_segment_driver FOREIGN KEY (driver_id) REFERENCES driver (id)
 );
 
+-- scoreJob: 운전자 하루 리포트 (docs/score-spec.md 7장). 새로 지표를 만든 운전자마다 실행당 하나 남긴다.
+-- score·penalty는 닫힌 구간이 없으면 NULL(미산출)이다. today_*는 이 리포트에 담긴 trip, window_*는 반영 범위 안 구간의 합이다.
+CREATE TABLE IF NOT EXISTS driver_score_report (
+    id                    BIGINT         NOT NULL AUTO_INCREMENT,
+    driver_id             BIGINT         NOT NULL,
+    vehicle_id            VARCHAR(64)    COLLATE utf8mb4_bin  NOT NULL,
+    report_date           DATE           NOT NULL,
+    score                 DOUBLE         NULL,
+    penalty               DOUBLE         NULL,
+    score_change          DOUBLE         NULL,
+    recent_scores         VARCHAR(1024)  NOT NULL,
+    window_segment_count  INT            NOT NULL,
+    today_distance_m      BIGINT         NOT NULL,
+    today_overspeed_km    DOUBLE         NOT NULL,
+    today_accel_count     INT            NOT NULL,
+    today_brake_count     INT            NOT NULL,
+    today_turn_count      INT            NOT NULL,
+    window_distance_m     BIGINT         NOT NULL,
+    window_overspeed_km   DOUBLE         NOT NULL,
+    window_accel_count    INT            NOT NULL,
+    window_brake_count    INT            NOT NULL,
+    window_turn_count     INT            NOT NULL,
+    created_at            DATETIME(3)    NOT NULL,
+    updated_at            DATETIME(3)    NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_driver_score_report_driver FOREIGN KEY (driver_id) REFERENCES driver (id),
+    INDEX idx_driver_score_report_driver_id_report_date (driver_id, report_date)
+);
+
 -- scoreJob: 종료된 trip 하나의 점수 지표. trip마다 한 번만 만든다 (docs/score-spec.md 4장).
 -- weighted_night_*는 야간 발생분에 시간대별 야간 추가 감점률을 곱해 더한 값이다.
--- segment_id는 구간 거리를 채워 구간이 닫히면 채운다.
+-- segment_id는 구간 거리를 채워 구간이 닫히면, report_id는 하루 리포트에 담기면 채운다.
 CREATE TABLE IF NOT EXISTS trip_score_metric (
     id                           BIGINT       NOT NULL AUTO_INCREMENT,
     trip_id                      BIGINT       NOT NULL,
@@ -114,6 +143,7 @@ CREATE TABLE IF NOT EXISTS trip_score_metric (
     weighted_night_turn          DOUBLE       NOT NULL,
     unevaluated_count            INT          NOT NULL,
     segment_id                   BIGINT       NULL,
+    report_id                    BIGINT       NULL,
     created_at                   DATETIME(3)  NOT NULL,
     updated_at                   DATETIME(3)  NOT NULL,
     PRIMARY KEY (id),
@@ -121,5 +151,7 @@ CREATE TABLE IF NOT EXISTS trip_score_metric (
     CONSTRAINT fk_trip_score_metric_trip FOREIGN KEY (trip_id) REFERENCES trip (id),
     CONSTRAINT fk_trip_score_metric_driver FOREIGN KEY (driver_id) REFERENCES driver (id),
     CONSTRAINT fk_trip_score_metric_segment FOREIGN KEY (segment_id) REFERENCES score_segment (id),
-    INDEX idx_trip_score_metric_driver_id_segment_id (driver_id, segment_id)
+    CONSTRAINT fk_trip_score_metric_report FOREIGN KEY (report_id) REFERENCES driver_score_report (id),
+    INDEX idx_trip_score_metric_driver_id_segment_id (driver_id, segment_id),
+    INDEX idx_trip_score_metric_report_id_driver_id (report_id, driver_id)
 );

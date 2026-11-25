@@ -59,6 +59,11 @@ public class TripScoreMetric extends BaseTimeEntity {
 	@JoinColumn(name = "segment_id")
 	private ScoreSegment segment;
 
+	/** 이 지표를 "오늘" 카운트로 담은 리포트. 아직 리포트에 담기지 않았으면 null이다 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "report_id")
+	private DriverScoreReport report;
+
 	@Builder
 	private TripScoreMetric(Trip trip, Driver driver, Instant endedAt, ScoreTally tally, int unevaluatedCount) {
 		this.trip = trip;
@@ -70,6 +75,10 @@ public class TripScoreMetric extends BaseTimeEntity {
 
 	public void assignSegment(ScoreSegment segment) {
 		this.segment = segment;
+	}
+
+	public void assignReport(DriverScoreReport report) {
+		this.report = report;
 	}
 
 }

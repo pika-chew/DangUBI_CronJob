@@ -7,6 +7,9 @@ public enum OutboxEventType {
 	TRIP_STARTED,
 
 	/** trip이 IN_PROGRESS에서 COMPLETED로 바뀌었다. 이미 종료된 trip의 ty=3을 다시 받으면 남기지 않는다. */
-	TRIP_COMPLETED
+	TRIP_COMPLETED,
+
+	/** scoreJob이 운전자 하루 리포트를 남겼다. 값은 driver_score_report에서 읽는다. */
+	DRIVER_SCORE_REPORTED
 
 }
