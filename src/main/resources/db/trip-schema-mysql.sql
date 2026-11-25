@@ -1,4 +1,4 @@
--- ingestJob이 적재하는 테이블 (docs/ingest-spec.md 7장). 시각은 모두 UTC.
+-- ingestJob이 적재하는 테이블 (docs/ingest-spec.md 7장)과 scoreJob이 만드는 테이블 (docs/score-spec.md). 시각은 모두 UTC.
 -- 운영: 배포 전에 직접 실행한다. 로컬·테스트: spring.sql.init으로 자동 실행한다.
 -- 여러 번 실행해도 되도록 IF NOT EXISTS로 만든다.
 -- 식별자 컬럼(vehicle_id, *idempotency_key)은 utf8mb4_bin으로 대소문자를 구분한다.
@@ -70,4 +70,29 @@ CREATE TABLE IF NOT EXISTS outbox (
     PRIMARY KEY (id),
     CONSTRAINT uk_outbox_aggregate_event UNIQUE (aggregate_type, aggregate_id, event_type),
     INDEX idx_outbox_status_id (status, id)
+);
+
+-- scoreJob: 종료된 trip 하나의 점수 지표. trip마다 한 번만 만든다 (docs/score-spec.md 4장).
+-- weighted_night_*는 야간 발생분에 시간대별 야간 추가 감점률을 곱해 더한 값이다.
+CREATE TABLE IF NOT EXISTS trip_score_metric (
+    id                           BIGINT       NOT NULL AUTO_INCREMENT,
+    trip_id                      BIGINT       NOT NULL,
+    driver_id                    BIGINT       NOT NULL,
+    ended_at                     DATETIME(3)  NOT NULL,
+    distance_m                   BIGINT       NOT NULL,
+    overspeed_km                 DOUBLE       NOT NULL,
+    accel_count                  INT          NOT NULL,
+    brake_count                  INT          NOT NULL,
+    turn_count                   INT          NOT NULL,
+    weighted_night_overspeed_km  DOUBLE       NOT NULL,
+    weighted_night_accel         DOUBLE       NOT NULL,
+    weighted_night_brake         DOUBLE       NOT NULL,
+    weighted_night_turn          DOUBLE       NOT NULL,
+    unevaluated_count            INT          NOT NULL,
+    created_at                   DATETIME(3)  NOT NULL,
+    updated_at                   DATETIME(3)  NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_trip_score_metric_trip_id UNIQUE (trip_id),
+    CONSTRAINT fk_trip_score_metric_trip FOREIGN KEY (trip_id) REFERENCES trip (id),
+    CONSTRAINT fk_trip_score_metric_driver FOREIGN KEY (driver_id) REFERENCES driver (id)
 );
