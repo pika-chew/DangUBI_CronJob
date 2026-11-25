@@ -9,6 +9,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ScoreStaticValues {
 
+	// Job·Step 이름
+	public static final String SCORE_JOB_NAME = "scoreJob";
+	public static final String SCORE_METRIC_STEP_NAME = "scoreMetricStep";
+	public static final String SCORE_REPORT_STEP_NAME = "scoreReportStep";
+
+	// Job 파라미터
+	/** 기준 거리 이름 (선택). 없으면 운영 기준. 예: scoreBasis=test */
+	public static final String SCORE_BASIS_PARAM = "scoreBasis";
+	/** RunIdIncrementer가 붙이는 키. 파라미터 없이 매일 새 실행을 만든다 */
+	public static final String SCORE_RUN_ID_PARAM = "run.id";
+	public static final String SCORE_BASIS_EXPRESSION = "#{jobParameters['" + SCORE_BASIS_PARAM + "']}";
+	public static final String SCORE_CHUNK_SIZE_PROPERTY = "${ubi.batch.score.chunk-size}";
+
 	// 이벤트 묶음 비트 (3장). 묶음 안의 비트가 하나라도 켜지면 그 묶음의 이벤트다
 	/** 과속: bit7 */
 	public static final int SCORE_OVERSPEED_MASK = 0x80;
