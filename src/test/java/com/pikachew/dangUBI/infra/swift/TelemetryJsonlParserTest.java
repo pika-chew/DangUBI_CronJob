@@ -25,6 +25,12 @@ public class TelemetryJsonlParserTest {
 			{"vehicleId":"vehicle-001","ts":1793577600100,"ty":3,"schemaVersion":1,"idempotencyKey":"example-trip-1",\
 			"pld":{"tid":354,"stt":1793574000000,"edt":1793577600000,"dis":30000,"hsts":90,"mesp":30,"dtvt":3600}}""";
 
+	/** Lambda를 거친 실제 ty=3 출력 (2026-11-25) */
+	private static final String LAMBDA_TRIP_LINE = """
+			{"vehicleId":"0DS614RB2TT925001","ts":1795566000000,"ty":3,"schemaVersion":1,\
+			"idempotencyKey":"fc430f29e76652d76176f645b54b311eaa25392345894f9ce04321a845ab171d",\
+			"pld":{"tid":26112501,"stt":1795564800000,"edt":1795566000000,"dis":12000,"hsts":65,"mesp":36,"dtvt":1170}}""";
+
 	public static final String MICROTRIP_LINE = """
 			{"vehicleId":"vehicle-001","ts":1793575800100,"ty":4,"schemaVersion":1,"idempotencyKey":"example-microtrip-1",\
 			"pld":{"tid":354,"clt":1793575800000,"sp":70,"em":"28"}}""";
@@ -50,12 +56,35 @@ public class TelemetryJsonlParserTest {
 	}
 
 	@Test
-	void 문서상_필수여도_실제로_빠진_필드는_null이다() {
-		TripSnapshot trip = (TripSnapshot) TelemetryJsonlParser.parseLine(TRIP_LINE);
+	void Lambda가_보낸_실제_ty3_줄을_해석한다() {
+		TripSnapshot trip = (TripSnapshot) TelemetryJsonlParser.parseLine(LAMBDA_TRIP_LINE);
 
-		assertThat(trip.totalDistance()).isNull();
-		assertThat(trip.fuelConsumption()).isNull();
-		assertThat(trip.startLat()).isNull();
+		assertThat(trip.vehicleId()).isEqualTo("0DS614RB2TT925001");
+		assertThat(trip.tid()).isEqualTo(26112501);
+		assertThat(trip.receivedAt()).isEqualTo(Instant.parse("2026-11-25T00:20:00Z"));
+		assertThat(trip.startedAt()).isEqualTo(Instant.parse("2026-11-25T00:00:00Z"));
+		assertThat(trip.endedAt()).isEqualTo(Instant.parse("2026-11-25T00:20:00Z"));
+		assertThat(trip.distance()).isEqualTo(12000);
+		assertThat(trip.maxSpeed()).isEqualTo(65);
+		assertThat(trip.avgSpeed()).isEqualTo(36);
+		assertThat(trip.drivingTime()).isEqualTo(1170);
+	}
+
+	@Test
+	void 빠진_요약_필드는_null이다() {
+		TripSnapshot trip = (TripSnapshot) TelemetryJsonlParser.parseLine(TRIP_LINE.replace(",\"hsts\":90", ""));
+
+		assertThat(trip.maxSpeed()).isNull();
+		assertThat(trip.distance()).isEqualTo(30000);
+	}
+
+	@Test
+	void 저장하지_않는_ty3_필드는_읽지_않는다() {
+		String line = TRIP_LINE.replace("\"tid\":354,", "\"tid\":354,\"fc\":4321,\"stlat\":375665,\"fwv\":9876,");
+
+		TripSnapshot trip = (TripSnapshot) TelemetryJsonlParser.parseLine(line);
+
+		assertThat(trip.toString()).doesNotContain("4321", "375665", "9876");
 	}
 
 	@Test

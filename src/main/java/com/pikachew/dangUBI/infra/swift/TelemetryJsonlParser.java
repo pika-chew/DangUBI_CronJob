@@ -126,23 +126,8 @@ public final class TelemetryJsonlParser {
 					fields.epochMillis(pld, "stt"),
 					fields.epochMillis(pld, "edt"),
 					fields.integer(pld, "dis"),
-					fields.integer(pld, "tdis"),
-					fields.integer(pld, "fc"),
-					fields.integer(pld, "stlat"),
-					fields.integer(pld, "stlon"),
-					fields.integer(pld, "edlat"),
-					fields.integer(pld, "edlon"),
-					fields.integer(pld, "ctp"),
-					fields.integer(pld, "coe"),
-					fields.integer(pld, "fct"),
 					fields.integer(pld, "hsts"),
 					fields.integer(pld, "mesp"),
-					fields.integer(pld, "idt"),
-					fields.integer(pld, "btv"),
-					fields.integer(pld, "gnv"),
-					fields.integer(pld, "wut"),
-					fields.integer(pld, "est"),
-					fields.integer(pld, "fwv"),
 					fields.integer(pld, "dtvt"));
 			case TELEMETRY_TY_MICROTRIP -> {
 				Instant collectedAt = Instant.ofEpochMilli(requiredLong(pld, "clt"));

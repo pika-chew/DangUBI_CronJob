@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS driver (
     CONSTRAINT uk_driver_vehicle_id UNIQUE (vehicle_id)
 );
 
+-- ty=3 요약값은 Lambda가 보내는 필드(stt, edt, dis, hsts, mesp, dtvt)만 저장한다 (docs/ingest-spec.md 6장).
 CREATE TABLE IF NOT EXISTS trip (
     id                    BIGINT        NOT NULL AUTO_INCREMENT,
     driver_id             BIGINT        NOT NULL,
@@ -24,23 +25,8 @@ CREATE TABLE IF NOT EXISTS trip (
     first_collected_at    DATETIME(3)   NULL,
     last_collected_at     DATETIME(3)   NULL,
     distance              INT           NULL,
-    total_distance        INT           NULL,
-    fuel_consumption      INT           NULL,
-    start_lat             INT           NULL,
-    start_lon             INT           NULL,
-    end_lat               INT           NULL,
-    end_lon               INT           NULL,
-    coolant_temp_avg      INT           NULL,
-    carbon_emission       INT           NULL,
-    fuel_cut_time         INT           NULL,
     max_speed             INT           NULL,
     avg_speed             INT           NULL,
-    idle_time             INT           NULL,
-    battery_voltage       INT           NULL,
-    generator_voltage     INT           NULL,
-    warmup_time           INT           NULL,
-    high_speed_time       INT           NULL,
-    firmware_version      INT           NULL,
     driving_time          INT           NULL,
     trip_idempotency_key  VARCHAR(128)  COLLATE utf8mb4_bin  NULL,
     trip_received_at      DATETIME(3)   NULL,

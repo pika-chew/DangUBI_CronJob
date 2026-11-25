@@ -60,23 +60,8 @@ public class Trip extends BaseTimeEntity {
 	private Instant lastCollectedAt;
 
 	private Integer distance;
-	private Integer totalDistance;
-	private Integer fuelConsumption;
-	private Integer startLat;
-	private Integer startLon;
-	private Integer endLat;
-	private Integer endLon;
-	private Integer coolantTempAvg;
-	private Integer carbonEmission;
-	private Integer fuelCutTime;
 	private Integer maxSpeed;
 	private Integer avgSpeed;
-	private Integer idleTime;
-	private Integer batteryVoltage;
-	private Integer generatorVoltage;
-	private Integer warmupTime;
-	private Integer highSpeedTime;
-	private Integer firmwareVersion;
 	private Integer drivingTime;
 
 	@Column(length = 128)
@@ -108,23 +93,8 @@ public class Trip extends BaseTimeEntity {
 		this.startedAt = snapshot.startedAt();
 		this.endedAt = snapshot.endedAt();
 		this.distance = snapshot.distance();
-		this.totalDistance = snapshot.totalDistance();
-		this.fuelConsumption = snapshot.fuelConsumption();
-		this.startLat = snapshot.startLat();
-		this.startLon = snapshot.startLon();
-		this.endLat = snapshot.endLat();
-		this.endLon = snapshot.endLon();
-		this.coolantTempAvg = snapshot.coolantTempAvg();
-		this.carbonEmission = snapshot.carbonEmission();
-		this.fuelCutTime = snapshot.fuelCutTime();
 		this.maxSpeed = snapshot.maxSpeed();
 		this.avgSpeed = snapshot.avgSpeed();
-		this.idleTime = snapshot.idleTime();
-		this.batteryVoltage = snapshot.batteryVoltage();
-		this.generatorVoltage = snapshot.generatorVoltage();
-		this.warmupTime = snapshot.warmupTime();
-		this.highSpeedTime = snapshot.highSpeedTime();
-		this.firmwareVersion = snapshot.firmwareVersion();
 		this.drivingTime = snapshot.drivingTime();
 		this.tripIdempotencyKey = snapshot.idempotencyKey();
 		this.tripReceivedAt = snapshot.receivedAt();
