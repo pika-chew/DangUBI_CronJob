@@ -72,8 +72,32 @@ CREATE TABLE IF NOT EXISTS outbox (
     INDEX idx_outbox_status_id (status, id)
 );
 
+-- scoreJob: 운전자별로 trip 지표를 쌓아 구간 거리를 넘었을 때 닫은 구간 (docs/score-spec.md 5장).
+-- 집계 컬럼은 trip_score_metric과 같다. 닫힌 구간만 저장한다.
+CREATE TABLE IF NOT EXISTS score_segment (
+    id                           BIGINT       NOT NULL AUTO_INCREMENT,
+    driver_id                    BIGINT       NOT NULL,
+    sequence_no                  INT          NOT NULL,
+    distance_m                   BIGINT       NOT NULL,
+    overspeed_km                 DOUBLE       NOT NULL,
+    accel_count                  INT          NOT NULL,
+    brake_count                  INT          NOT NULL,
+    turn_count                   INT          NOT NULL,
+    weighted_night_overspeed_km  DOUBLE       NOT NULL,
+    weighted_night_accel         DOUBLE       NOT NULL,
+    weighted_night_brake         DOUBLE       NOT NULL,
+    weighted_night_turn          DOUBLE       NOT NULL,
+    penalty                      DOUBLE       NOT NULL,
+    created_at                   DATETIME(3)  NOT NULL,
+    updated_at                   DATETIME(3)  NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_score_segment_driver_id_sequence_no UNIQUE (driver_id, sequence_no),
+    CONSTRAINT fk_score_segment_driver FOREIGN KEY (driver_id) REFERENCES driver (id)
+);
+
 -- scoreJob: 종료된 trip 하나의 점수 지표. trip마다 한 번만 만든다 (docs/score-spec.md 4장).
 -- weighted_night_*는 야간 발생분에 시간대별 야간 추가 감점률을 곱해 더한 값이다.
+-- segment_id는 구간 거리를 채워 구간이 닫히면 채운다.
 CREATE TABLE IF NOT EXISTS trip_score_metric (
     id                           BIGINT       NOT NULL AUTO_INCREMENT,
     trip_id                      BIGINT       NOT NULL,
@@ -89,10 +113,13 @@ CREATE TABLE IF NOT EXISTS trip_score_metric (
     weighted_night_brake         DOUBLE       NOT NULL,
     weighted_night_turn          DOUBLE       NOT NULL,
     unevaluated_count            INT          NOT NULL,
+    segment_id                   BIGINT       NULL,
     created_at                   DATETIME(3)  NOT NULL,
     updated_at                   DATETIME(3)  NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT uk_trip_score_metric_trip_id UNIQUE (trip_id),
     CONSTRAINT fk_trip_score_metric_trip FOREIGN KEY (trip_id) REFERENCES trip (id),
-    CONSTRAINT fk_trip_score_metric_driver FOREIGN KEY (driver_id) REFERENCES driver (id)
+    CONSTRAINT fk_trip_score_metric_driver FOREIGN KEY (driver_id) REFERENCES driver (id),
+    CONSTRAINT fk_trip_score_metric_segment FOREIGN KEY (segment_id) REFERENCES score_segment (id),
+    INDEX idx_trip_score_metric_driver_id_segment_id (driver_id, segment_id)
 );

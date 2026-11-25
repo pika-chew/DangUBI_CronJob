@@ -54,6 +54,11 @@ public class TripScoreMetric extends BaseTimeEntity {
 	@Column(nullable = false)
 	private int unevaluatedCount;
 
+	/** 이 지표가 묶인 구간. 아직 구간 거리를 채우지 못했으면 null이다 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "segment_id")
+	private ScoreSegment segment;
+
 	@Builder
 	private TripScoreMetric(Trip trip, Driver driver, Instant endedAt, ScoreTally tally, int unevaluatedCount) {
 		this.trip = trip;
@@ -61,6 +66,10 @@ public class TripScoreMetric extends BaseTimeEntity {
 		this.endedAt = endedAt;
 		this.tally = tally;
 		this.unevaluatedCount = unevaluatedCount;
+	}
+
+	public void assignSegment(ScoreSegment segment) {
+		this.segment = segment;
 	}
 
 }
