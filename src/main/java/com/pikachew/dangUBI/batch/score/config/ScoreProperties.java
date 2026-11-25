@@ -1,6 +1,7 @@
 package com.pikachew.dangUBI.batch.score.config;
 
 import static com.pikachew.dangUBI.common.consts.ScoreStaticValues.SCORE_DEFAULT_BASIS;
+import static com.pikachew.dangUBI.common.consts.ScoreStaticValues.SCORE_METERS_PER_KM;
 import static com.pikachew.dangUBI.common.consts.ScoreStaticValues.SCORE_PROPERTY_PREFIX;
 
 import java.time.Duration;
@@ -44,6 +45,15 @@ public record ScoreProperties(
 	 * @param windowDistanceKm  반영 감점에 넣는 최근 구간 거리
 	 */
 	public record Basis(double segmentDistanceKm, double windowDistanceKm) {
+
+		public long segmentDistanceM() {
+			return Math.round(segmentDistanceKm * SCORE_METERS_PER_KM);
+		}
+
+		public long windowDistanceM() {
+			return Math.round(windowDistanceKm * SCORE_METERS_PER_KM);
+		}
+
 	}
 
 }
