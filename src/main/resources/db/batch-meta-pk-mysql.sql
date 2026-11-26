@@ -1,0 +1,13 @@
+-- 운영 DB를 새로 만들 때 Spring Batch 메타 테이블(BATCH_*)을 만든 직후 한 번 실행한다.
+-- 실행 순서: spring-batch-core jar의 org/springframework/batch/core/schema-mysql.sql → 이 파일 → trip-schema-mysql.sql
+--
+-- Spring Batch가 주는 스키마에서 BATCH_JOB_EXECUTION_PARAMS만 기본 키가 없다.
+-- 운영 MySQL(InnoDB Cluster, mysql-router 경유)은 기본 키가 없는 테이블에 쓰기를 막으므로, Job 파라미터를 저장하지 못해 Job이 시작되지 않는다.
+-- 이미 기본 키가 있으면 실패하므로 두 번 실행하지 않는다. 로컬·테스트 DB에는 실행하지 않는다.
+--
+-- 실행 예:
+--   kubectl -n dangubi-data exec -it dangubi-mysql-0 -c mysql -- \
+--     mysql -h mysql-router -P 3306 -u root -p ubi -e "
+--   ALTER TABLE BATCH_JOB_EXECUTION_PARAMS ADD PRIMARY KEY (JOB_EXECUTION_ID, PARAMETER_NAME);
+--   SHOW CREATE TABLE BATCH_JOB_EXECUTION_PARAMS\G"
+ALTER TABLE BATCH_JOB_EXECUTION_PARAMS ADD PRIMARY KEY (JOB_EXECUTION_ID, PARAMETER_NAME);

@@ -14,6 +14,6 @@ public record MicrotripSnapshot(
 		long tid,
 		Instant collectedAt,            // clt (단말기 기준 수집 시각)
 		Integer speed,                  // sp (km/h)
-		Integer eventMask               // em: 16진 문자열을 푼 비트마스크. bit0 급출발 … bit6 급정지, bit7 과속
+		Integer eventMask               // em 비트마스크. bit0 급출발 … bit6 급정지, bit8 과속
 ) implements TelemetrySnapshot {
 }

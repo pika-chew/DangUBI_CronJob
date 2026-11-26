@@ -1,6 +1,7 @@
 package com.pikachew.dangUBI.infra.swift;
 
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_EVENT_MASK_HEX_PATTERN;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_EVENT_MASK_MAX;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_SUPPORTED_SCHEMA_VERSION;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_TY_MICROTRIP;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_TY_TRIP;
@@ -38,7 +39,7 @@ import tools.jackson.databind.json.JsonMapper;
  * - 지원하지 않는 ty·schemaVersion인 줄도 버린다.
  * - 나머지 필드는 형식이 틀리면 그 필드만 null로 두고 경고 로그를 남긴다. 원본은 Swift에 남아 있다.
  * - 숫자 필드는 JSON 숫자와 숫자 문자열을 모두 받는다.
- * - microtrip의 sp는 소수로 오므로 반올림해 정수로 둔다.
+ * - 측정값(microtrip의 sp, trip의 dis·hsts·mesp·dtvt)은 소수로 오므로 반올림해 정수로 둔다.
  *
  * ============================================================================================
  * [MEMORY RISK] 파일 하나를 통째로 메모리에 올린다 — 장애 테스트 필수 확인 지점
@@ -126,10 +127,10 @@ public final class TelemetryJsonlParser {
 			case TELEMETRY_TY_TRIP -> new TripSnapshot(vehicleId, idempotencyKey, receivedAt, tid,
 					fields.epochMillis(pld, "stt"),
 					fields.epochMillis(pld, "edt"),
-					fields.integer(pld, "dis"),
-					fields.integer(pld, "hsts"),
-					fields.integer(pld, "mesp"),
-					fields.integer(pld, "dtvt"));
+					fields.roundedInteger(pld, "dis"),
+					fields.roundedInteger(pld, "hsts"),
+					fields.roundedInteger(pld, "mesp"),
+					fields.roundedInteger(pld, "dtvt"));
 			case TELEMETRY_TY_MICROTRIP -> {
 				Instant collectedAt = Instant.ofEpochMilli(requiredLong(pld, "clt"));
 				yield new MicrotripSnapshot(vehicleId, idempotencyKey, receivedAt, tid, collectedAt,
@@ -167,16 +168,7 @@ public final class TelemetryJsonlParser {
 	/** 버려도 되는 필드를 읽는다. 형식이 틀리면 null로 두고 경고만 남긴다 */
 	private record Fields(String idempotencyKey) {
 
-		Integer integer(JsonNode parent, String name) {
-			JsonNode node = parent.get(name);
-			if (JsonNodeUtils.isAbsent(node)) {
-				return null;
-			}
-			Integer value = JsonNodeUtils.toInteger(node);
-			return value == null ? invalid(name, node) : value;
-		}
-
-		/** sp처럼 Lambda가 소수로 보내는 필드. 소수점 아래는 점수 계산에 쓰지 않아 반올림한다 */
+		/** Lambda가 소수로 보내는 측정값(sp, dis, hsts, mesp, dtvt). 소수점 아래는 점수 계산에 쓰지 않아 반올림한다 */
 		Integer roundedInteger(JsonNode parent, String name) {
 			JsonNode node = parent.get(name);
 			if (JsonNodeUtils.isAbsent(node)) {
@@ -195,18 +187,25 @@ public final class TelemetryJsonlParser {
 			return value == null ? invalid(name, node) : Instant.ofEpochMilli(value);
 		}
 
-		/** em: "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다. 숫자 28로 와도 16진으로 본다 */
+		/**
+		 * em: Lambda는 JSON 숫자(10진)로 보낸다. 256 = bit8(과속).
+		 * 문서 예시처럼 문자열로 오면 16진으로 본다. "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다
+		 */
 		Integer eventMask(JsonNode parent) {
 			JsonNode node = parent.get("em");
 			if (JsonNodeUtils.isAbsent(node)) {
 				return null;
 			}
-			String text = node.isString() ? node.stringValue().trim()
-					: node.isIntegralNumber() ? node.asString() : null;
-			if (text == null || !TELEMETRY_EVENT_MASK_HEX_PATTERN.matcher(text).matches()) {
+			Integer value = node.isString() ? hexEventMask(node.stringValue().trim())
+					: node.isIntegralNumber() ? JsonNodeUtils.toInteger(node) : null;
+			if (value == null || value < 0 || value > TELEMETRY_EVENT_MASK_MAX) {
 				return invalid("em", node);
 			}
-			return Integer.parseInt(text, 16);
+			return value;
+		}
+
+		private static Integer hexEventMask(String text) {
+			return TELEMETRY_EVENT_MASK_HEX_PATTERN.matcher(text).matches() ? Integer.parseInt(text, 16) : null;
 		}
 
 		private <T> T invalid(String name, JsonNode node) {

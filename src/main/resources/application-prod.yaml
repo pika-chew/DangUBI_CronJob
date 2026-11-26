@@ -8,6 +8,7 @@ spring:
   batch:
     jdbc:
       # 메타 테이블(BATCH_*)은 미리 만든다: spring-batch-core jar의 org/springframework/batch/core/schema-mysql.sql
+      # 그다음 db/batch-meta-pk-mysql.sql로 기본 키를 추가한다.
       initialize-schema: never
   sql:
     init:
