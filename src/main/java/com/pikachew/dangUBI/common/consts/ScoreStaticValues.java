@@ -38,6 +38,8 @@ public final class ScoreStaticValues {
 	// 점수 (6장)
 	public static final double SCORE_MAX = 100.0;
 	public static final double SCORE_MIN = 0.0;
+	/** 리포트 이벤트(outbox payload)에 싣는 숫자의 소수 자릿수 */
+	public static final int SCORE_EVENT_SCALE = 2;
 
 	// 설정 (application.yaml)
 	public static final String SCORE_PROPERTY_PREFIX = "ubi.batch.score";

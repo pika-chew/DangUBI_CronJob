@@ -124,11 +124,12 @@ pipeline {
                     post { failure { recordFailedStage() } }
                 }
 
-                // 찾은 비밀값은 리포트에 가려서(--redact) 남긴다
+                // 찾은 비밀값은 가려서(--redact) 남긴다. --verbose로 규칙·파일·줄·커밋을 콘솔에도 찍어 리포트를 열지 않고 위치를 본다.
+                // 비밀값이 아닌 것으로 확인한 발견은 .gitleaksignore에 지문으로 등록한다
                 stage('Secret Scan') {
                     steps {
                         inContainer(env.GITLEAKS_IMAGE) {
-                            sh 'gitleaks detect --source . --no-banner --redact --report-path "$REPORT_DIR/gitleaks.json"'
+                            sh 'gitleaks detect --source . --no-banner --redact --verbose --report-path "$REPORT_DIR/gitleaks.json"'
                         }
                     }
                     post { failure { recordFailedStage() } }

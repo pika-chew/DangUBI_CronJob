@@ -23,6 +23,7 @@ import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxAggregateType;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
+import com.pikachew.dangUBI.domain.outbox.model.VehicleScoreReportOutboxPayload;
 import com.pikachew.dangUBI.domain.outbox.repository.OutboxRepository;
 import com.pikachew.dangUBI.domain.score.entity.VehicleScoreReport;
 import com.pikachew.dangUBI.domain.score.entity.ScoreEventSummary;
@@ -117,7 +118,17 @@ class ScoreReportWriterTest {
 		List<Outbox> outboxes = outboxRepository.findAllByAggregateTypeAndAggregateIdOrderById(
 				OutboxAggregateType.VEHICLE_SCORE_REPORT, report.getId());
 		assertThat(outboxes).extracting(Outbox::getEventType).containsExactly(OutboxEventType.VEHICLE_SCORE_REPORTED);
-		assertThat(outboxes.get(0).getPayload()).contains("\"reportId\":" + report.getId(), "\"vehicleId\":\"0DS614RB2TT925001\"");
+		VehicleScoreReportOutboxPayload payload = jsonMapper.readValue(outboxes.get(0).getPayload(), VehicleScoreReportOutboxPayload.class);
+		assertThat(payload.reportId()).isEqualTo(report.getId());
+		assertThat(payload.vehicleId()).isEqualTo("0DS614RB2TT925001");
+		assertThat(payload.reportDate()).isEqualTo(LocalDate.now(SCORE_ZONE).toString());
+		// 100 − 380/60 = 93.666… → 소수 둘째 자리로 반올림
+		assertThat(payload.score()).isEqualTo(93.67);
+		assertThat(payload.penalty()).isEqualTo(6.33);
+		assertThat(payload.scoreChange()).isNull();
+		assertThat(payload.recentScores()).containsExactly(93.67);
+		assertThat(payload.today()).isEqualTo(new VehicleScoreReportOutboxPayload.Counts(70.0, 0.0, 2, 1, 0));
+		assertThat(payload.window()).isEqualTo(new VehicleScoreReportOutboxPayload.Counts(60.0, 0.0, 2, 1, 0));
 	}
 
 	@Test
@@ -132,6 +143,12 @@ class ScoreReportWriterTest {
 		assertThat(report.getPenalty()).isNull();
 		assertThat(report.getRecentScores()).isEqualTo("[]");
 		assertThat(report.getToday().getAccelCount()).isEqualTo(1);
+
+		VehicleScoreReportOutboxPayload payload = jsonMapper.readValue(outboxRepository.findAllByAggregateTypeAndAggregateIdOrderById(
+				OutboxAggregateType.VEHICLE_SCORE_REPORT, report.getId()).get(0).getPayload(), VehicleScoreReportOutboxPayload.class);
+		assertThat(payload.score()).isNull();
+		assertThat(payload.recentScores()).isEmpty();
+		assertThat(payload.today().accel()).isEqualTo(1);
 	}
 
 	@Test
