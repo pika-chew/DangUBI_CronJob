@@ -21,9 +21,9 @@ public final class TelemetryStaticValues {
 	public static final int TELEMETRY_TY_TRIP = 3;
 	public static final int TELEMETRY_TY_MICROTRIP = 4;
 	public static final int TELEMETRY_SUPPORTED_SCHEMA_VERSION = 1;
-	/** em이 문자열로 올 때: 이벤트 비트마스크를 16진 1–3자리로 적은 값 (bit8 = "100") */
-	public static final Pattern TELEMETRY_EVENT_MASK_HEX_PATTERN = Pattern.compile("[0-9A-Fa-f]{1,3}");
-	/** em에 정의된 비트는 bit0–bit8이다 (score-spec.md 2장) */
-	public static final int TELEMETRY_EVENT_MASK_MAX = 0x1FF;
+	/** em이 문자열로 올 때: 이벤트 비트마스크를 16진 1–2자리로 적은 값 */
+	public static final Pattern TELEMETRY_EVENT_MASK_HEX_PATTERN = Pattern.compile("[0-9A-Fa-f]{1,2}");
+	/** em에 정의된 비트는 bit0–bit7이다 (score-spec.md 2장) */
+	public static final int TELEMETRY_EVENT_MASK_MAX = 0xFF;
 
 }
