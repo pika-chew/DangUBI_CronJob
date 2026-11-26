@@ -26,6 +26,11 @@ ubi:
     ingest:
       # 파일 하나마다 커밋해 이어 읽기를 확인할 수 있게 한다.
       chunk-size: 1
+    score:
+      # 구간 50km, 반영 범위 600km로 짧게 돌린다
+      basis: test
+      # 방금 넣은 trip도 바로 점수를 매긴다
+      settle-delay: 0s
   # 외부 저장소 가짜 값. 접속하지 않는다.
   s3:
     bucket: test-source

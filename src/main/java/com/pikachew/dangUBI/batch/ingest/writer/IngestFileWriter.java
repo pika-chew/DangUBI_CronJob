@@ -2,6 +2,7 @@ package com.pikachew.dangUBI.batch.ingest.writer;
 
 import static com.pikachew.dangUBI.common.consts.IngestStaticValues.INGEST_IDEMPOTENCY_KEY_QUERY_BATCH_SIZE;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -46,7 +47,8 @@ import tools.jackson.databind.json.JsonMapper;
  * 2. trip: 필요한 (vehicleId, tid)를 조회하고, 없는 운전자와 trip을 만든다.
  * 3. 새 microtrip을 저장하고 trip의 수집 범위를 넓힌다.
  * 4. ty=3으로 trip을 종료한다.
- * 5. 새로 만든 trip은 TRIP_STARTED, IN_PROGRESS에서 종료된 trip은 TRIP_COMPLETED를 outbox에 남긴다.
+ * 5. 새 데이터를 받은 trip에 적재 시각(lastIngestedAt)을 남긴다. scoreJob은 이 시각부터 settle-delay를 기다린다.
+ * 6. 새로 만든 trip은 TRIP_STARTED, IN_PROGRESS에서 종료된 trip은 TRIP_COMPLETED를 outbox에 남긴다.
  *    trip 저장과 같은 chunk 트랜잭션이라 함께 커밋·롤백된다. 이미 종료된 trip의 ty=3을 다시 받으면 남기지 않는다.
  * 두 메시지가 trip의 서로 다른 컬럼만 고치므로 순서와 상관없이, 다시 넣어도 결과가 같다.
  *
@@ -107,6 +109,7 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 		recordCollectedAt(newMicrotrips, trips);
 		List<Trip> completingTrips = selectInProgressTrips(tripSnapshots, trips);
 		completeTrips(tripSnapshots, trips);
+		recordIngestedAt(trips.values(), Instant.now());
 
 		saveOutboxes(OutboxEventType.TRIP_STARTED, createdTrips.values());
 		saveOutboxes(OutboxEventType.TRIP_COMPLETED, completingTrips);
@@ -211,6 +214,14 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 		snapshots.forEach(snapshot -> trips.get(new TripKey(snapshot.vehicleId(), snapshot.tid())).complete(snapshot));
 	}
 
+	/**
+	 * 이번 chunk에서 새 microtrip이나 ty=3을 받은 trip에 적재 시각을 남긴다. scoreJob이 이 시각부터 기다린다.
+	 * 이미 저장된 microtrip만 다시 온 trip은 trips에 없어 바뀌지 않는다.
+	 */
+	private static void recordIngestedAt(Collection<Trip> trips, Instant ingestedAt) {
+		trips.forEach(trip -> trip.recordIngestedAt(ingestedAt));
+	}
+
 	private void saveOutboxes(OutboxEventType eventType, Collection<Trip> trips) {
 		List<Outbox> outboxes = trips.stream()
 				.map(trip -> Outbox.builder()
@@ -230,20 +241,8 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 				.idempotencyKey(snapshot.idempotencyKey())
 				.collectedAt(snapshot.collectedAt())
 				.receivedAt(snapshot.receivedAt())
-				.lat(snapshot.lat())
-				.lon(snapshot.lon())
-				.locationAccuracy(snapshot.locationAccuracy())
-				.fuelConsumption(snapshot.fuelConsumption())
-				.tripDistance(snapshot.tripDistance())
-				.rpm(snapshot.rpm())
 				.speed(snapshot.speed())
 				.eventMask(snapshot.eventMask() == null ? null : snapshot.eventMask().shortValue())
-				.engineLoad(snapshot.engineLoad())
-				.accX(snapshot.accX())
-				.accY(snapshot.accY())
-				.gyroY(snapshot.gyroY())
-				.batteryVoltage(snapshot.batteryVoltage())
-				.accelPedalPosition(snapshot.accelPedalPosition())
 				.build();
 	}
 

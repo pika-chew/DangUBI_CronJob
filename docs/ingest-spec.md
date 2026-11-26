@@ -82,8 +82,9 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 - 그 밖의 필드는 형식이 틀리면 그 필드만 null로 둔다.
 - 문서상 필수(M)인 필드도 실제로 빠질 수 있어 null을 허용한다.
 - 숫자 필드는 JSON 숫자와 숫자 문자열을 모두 받는다. 값은 원본 Int 그대로 두고 단위·스케일은 바꾸지 않는다.
-- `em`은 16진 문자열이다. 비트마스크로 풀어 저장한다(`"28"` = 0x28 = 급유턴 + 급가속).
-- `xyz`는 `"가속도X,가속도Y,각속도Y"`다. 세 컬럼으로 나눠 저장한다.
+- `em`은 16진 문자열이다. 비트마스크로 풀어 저장한다(`"28"` = 0x28 = 급유턴 + 급가속). 비트 정의(bit7 = 과속 포함)는 [score-spec.md](score-spec.md) 2장을 따른다.
+- trip(ty=3)은 Lambda가 보내는 요약 필드 `stt`, `edt`, `dis`(운행 누적 주행거리, m), `hsts`, `mesp`, `dtvt`만 읽어 저장한다.
+- microtrip은 점수 계산에 쓰는 `clt`, `sp`, `em`만 읽어 저장한다. 나머지 필드(`lat`, `lon`, `xyz`, `vv` 등)는 Swift 원본에만 남는다. 다시 필요해지면 컬럼을 추가하고 Swift에서 다시 적재한다.
 - `usm`(휴대폰 번호)은 개인정보라 저장하지 않는다.
 - gz가 깨진 파일은 Job을 실패시킨다. 원인을 확인한 뒤 다시 실행한다.
 
@@ -92,6 +93,7 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 - trip 키는 `(vehicleId, tid)`다.
 - microtrip이 먼저 오면 trip을 `IN_PROGRESS`로 만든다. 그리고 `clt`의 최소값·최대값을 `first_collected_at`, `last_collected_at`에 반영한다.
 - ty=3이 오면 trip을 `COMPLETED`로 바꾸고 요약값을 채운다.
+- 새 microtrip이나 ty=3을 받은 trip에는 그 chunk의 적재 시각을 `last_ingested_at`에 남긴다. scoreJob은 이 시각부터 settle-delay를 기다린다(score-spec.md 8장). 이미 저장된 microtrip만 다시 오면 바꾸지 않는다.
 - 두 메시지는 서로의 컬럼을 건드리지 않는다. status는 `IN_PROGRESS` → `COMPLETED`로만 바뀐다. 그래서 순서와 상관없이 결과가 같다.
 - 자정을 넘긴 trip은 이틀치 Job에 나뉘어 들어와도 같은 행으로 합쳐진다.
 - TODO: ty=3이 오지 않는 trip을 시간 초과로 닫는 정책.
@@ -103,8 +105,8 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 | 표 | 키 | 내용 |
 | --- | --- | --- |
 | `driver` | `vehicle_id` 유니크 | 지금은 차량 1대 = 운전자 1명 |
-| `trip` | `(vehicle_id, tid)` 유니크 | 상태, ty=3 요약값, microtrip 수집 시각 범위 |
-| `trip_microtrip` | `idempotency_key` 유니크 | microtrip 한 건. 인덱스 `(trip_id, collected_at)` |
+| `trip` | `(vehicle_id, tid)` 유니크 | 상태, ty=3 요약값(시작·종료 시각, 주행거리, 최고·평균 속도, 주행 시간), microtrip 수집 시각 범위, 마지막 적재 시각 |
+| `trip_microtrip` | `idempotency_key` 유니크 | microtrip 한 건의 수집 시각(`clt`), 속도(`sp`), 이벤트 비트(`em`). 인덱스 `(trip_id, collected_at)` |
 | `outbox` | `(aggregate_type, aggregate_id, event_type)` 유니크 | 적재와 같은 트랜잭션에서 남기는 발행 대기 이벤트. 인덱스 `(status, id)` |
 
 ### outbox 이벤트

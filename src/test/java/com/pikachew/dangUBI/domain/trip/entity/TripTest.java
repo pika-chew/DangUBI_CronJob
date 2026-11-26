@@ -15,6 +15,16 @@ class TripTest {
 	private final Driver driver = Driver.builder().vehicleId("vehicle-001").build();
 
 	@Test
+	void 적재_시각은_마지막으로_남긴_값이다() {
+		Trip trip = newTrip();
+
+		trip.recordIngestedAt(Instant.parse("2026-11-26T02:00:00Z"));
+		trip.recordIngestedAt(Instant.parse("2026-11-26T10:00:00Z"));
+
+		assertThat(trip.getLastIngestedAt()).isEqualTo(Instant.parse("2026-11-26T10:00:00Z"));
+	}
+
+	@Test
 	void 처음_만들면_진행_중이다() {
 		Trip trip = newTrip();
 

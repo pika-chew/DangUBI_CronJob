@@ -28,3 +28,34 @@ ubi:
       # [MEMORY RISK] 이 값만큼의 파일 내용과 엔티티가 커밋 전까지 한꺼번에 힙에 올라간다.
       #               운영 최대 파일 크기 × 이 값이 힙 한도 안에 들어오는지 장애 테스트로 확인한다. (임시값)
       chunk-size: 10
+    # 안전운전 점수 (docs/score-spec.md 9장)
+    score:
+      # 쓸 기준(bases의 이름). 테스트 실행은 --ubi.batch.score.basis=test
+      basis: standard
+      # chunk 하나에 담는 trip 수(지표 Step)와 차량 수(리포트 Step)
+      chunk-size: 100
+      # 같은 묶음이 이 간격 안에 이어지면 한 번의 기동으로 센다. microtrip 전송 주기 2초 × 2
+      maneuver-gap: 4s
+      # trip이 마지막으로 적재된 뒤 이만큼 지나야 점수를 매긴다. 늦게 복사된 파일을 rerun으로 다시 적재할 시간을 둔다
+      settle-delay: 24h
+      # 과속거리 1km당, 급가속·급감속·급회전 1회당 가중치
+      weights:
+        overspeed: 120
+        accel: 90
+        brake: 200
+        turn: 100
+      # KST 시간대 → 야간 추가 감점률. 없는 시간대는 0
+      night-rates:
+        "[23]": 0.2539
+        "[0]": 0.2692
+        "[1]": 0.4000
+        "[2]": 0.3840
+        "[3]": 0.1640
+      # 기준 이름 → 구간 거리·반영 범위. test는 테스트 DB에서만 쓴다(한 DB에 섞으면 구간 길이가 섞인다)
+      bases:
+        standard:
+          segment-distance-km: 125
+          window-distance-km: 1500
+        test:
+          segment-distance-km: 50
+          window-distance-km: 600
