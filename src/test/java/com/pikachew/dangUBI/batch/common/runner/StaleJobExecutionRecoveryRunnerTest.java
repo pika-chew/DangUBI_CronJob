@@ -38,7 +38,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.pikachew.dangUBI.batch.ingest.dto.ParsedTelemetryFile;
 import com.pikachew.dangUBI.batch.ingest.port.TelemetryFileReader;
 import com.pikachew.dangUBI.common.consts.IngestStaticValues;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.outbox.repository.OutboxRepository;
 import com.pikachew.dangUBI.domain.trip.repository.TripMicrotripRepository;
 import com.pikachew.dangUBI.domain.trip.repository.TripRepository;
@@ -70,9 +69,6 @@ class StaleJobExecutionRecoveryRunnerTest {
 	private JobOperator jobOperator;
 
 	@Autowired
-	private DriverRepository driverRepository;
-
-	@Autowired
 	private TripRepository tripRepository;
 
 	@Autowired
@@ -99,7 +95,6 @@ class StaleJobExecutionRecoveryRunnerTest {
 		outboxRepository.deleteAllInBatch();
 		microtripRepository.deleteAllInBatch();
 		tripRepository.deleteAllInBatch();
-		driverRepository.deleteAllInBatch();
 	}
 
 	@Test
