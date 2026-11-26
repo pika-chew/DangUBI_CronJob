@@ -72,6 +72,7 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 - 파라미터: `targetDate` (필수, yyyy-MM-dd, UTC), `rerun` (선택, 정수)
 - `firehose/processed/{targetDate}/` 아래 `.gz` 파일을 키 순서로 읽는다.
 - 실패한 실행은 같은 파라미터로 다시 실행하면 멈춘 곳부터 이어서 처리한다.
+- 실행 중에 프로세스가 죽어 STARTED로 남은 실행도 같다. 다시 띄우면 Job을 시작하기 전에 남은 실행을 FAILED로 정리하고, 마지막으로 커밋된 chunk 다음부터 이어서 처리한다.
 - 이미 COMPLETED된 날짜를 다시 적재하려면 `rerun=2`처럼 이전에 쓰지 않은 값을 붙인다. Spring Batch는 같은 파라미터로 완료된 Job을 다시 실행하지 않기 때문이다.
 - 다시 적재해도 결과가 같다. 이미 넣은 레코드는 `idempotencyKey`로 걸러진다.
 
@@ -154,7 +155,7 @@ metadata:
 spec:
   schedule: "0 2 * * *"
   timeZone: "Etc/UTC"
-  concurrencyPolicy: Forbid        # 전날 실행이 길어져도 겹치지 않게
+  concurrencyPolicy: Forbid        # 전날 실행이 길어져도 겹치지 않게. STARTED로 남은 실행을 자동 정리하는 전제다
   startingDeadlineSeconds: 3600
   jobTemplate:
     spec:

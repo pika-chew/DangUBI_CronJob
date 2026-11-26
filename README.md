@@ -20,6 +20,7 @@ java -jar build/libs/dangUBI-0.0.1-SNAPSHOT.jar \
   - 업무 테이블(`driver`, `trip`, `trip_microtrip`, `outbox`): `src/main/resources/db/trip-schema-mysql.sql`
 - 운영은 둘 다 자동으로 만들지 않는다. 배포 전에 `spring-batch-core` jar 안의 `org/springframework/batch/core/schema-mysql.sql`과 `db/trip-schema-mysql.sql`을 실행해 둔다.
 - Job 파라미터는 `key=value` 형식으로 넘긴다. 같은 파라미터로 이미 COMPLETED된 Job은 다시 돌지 않는다.
+- 실행 중에 프로세스가 죽으면(kill, OOM, 파드 축출) 실행이 STARTED로 남는다. 다음에 같은 Job을 띄우면 남은 실행을 먼저 FAILED로 정리하고 이어서 재시작한다(`StaleJobExecutionRecoveryRunner`). 같은 Job을 동시에 두 개 띄우지 않는다는 전제다.
 - 종료 코드: 성공 0, 실패 1.
 
 ## Job 목록
