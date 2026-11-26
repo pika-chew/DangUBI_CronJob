@@ -179,6 +179,24 @@ class DailyJobTest {
 	}
 
 	@Test
+	void S3_조회가_실패해도_대기를_지나_적재와_점수는_끝내고_Job은_FAILED로_끝난다() throws Exception {
+		// S3만 장애: reconcile과 복사 대기는 실패하지만 Swift에 있는 파일은 적재한다
+		given(sourceObjectStore.listObjects(DATE)).willThrow(new IllegalStateException("S3 접속 실패"));
+		given(rawObjectStore.listObjects(DATE)).willReturn(objects(FILE_A));
+		given(telemetryFileReader.listFiles(DATE)).willReturn(List.of(FILE_A));
+		given(telemetryFileReader.read(FILE_A)).willReturn(fileWithCompletedTrip(FILE_A));
+
+		JobExecution execution = jobOperatorTestUtils.startJob();
+
+		assertThat(execution.getStatus()).isEqualTo(BatchStatus.FAILED);
+		assertThat(steps(execution).get(RECONCILE_STEP_NAME).getExitStatus().getExitCode()).isEqualTo(ExitStatus.FAILED.getExitCode());
+		assertThat(steps(execution).get(DAILY_REQUEUE_WAIT_STEP_NAME).getExitStatus().getExitCode()).isEqualTo(ExitStatus.FAILED.getExitCode());
+		assertThat(steps(execution).get(INGEST_FILE_STEP_NAME).getStatus()).isEqualTo(BatchStatus.COMPLETED);
+		assertThat(steps(execution).get(SCORE_REPORT_STEP_NAME).getStatus()).isEqualTo(BatchStatus.COMPLETED);
+		assertThat(reportRepository.count()).isEqualTo(1);
+	}
+
+	@Test
 	void 적재가_실패하면_점수를_돌리지_않고_FAILED로_멈춘다() throws Exception {
 		given(sourceObjectStore.listObjects(DATE)).willReturn(objects(FILE_A));
 		given(rawObjectStore.listObjects(DATE)).willReturn(objects(FILE_A));

@@ -135,7 +135,7 @@ ingestJob Writer가 trip을 저장하는 chunk 트랜잭션 안에서 함께 기
 | 4 | `scoreMetricStep` → `scoreReportStep` | 적재 후 24시간이 지난 trip의 점수 지표와 차량 리포트·outbox 이벤트를 남긴다 (score-spec.md 8장) |
 
 - 3–4가 실패하면 Job을 멈춘다. 같은 날짜로 다시 띄우면(같은 날 다시 실행) 실패한 Step부터 이어서 처리한다.
-- reconcile만 실패하면(재큐잉 일부 실패, 저장소 조회 실패) 2–4는 그대로 진행하고 Job은 FAILED로 끝난다. 종료 코드가 0이 아니라 K8s CronJob 실패 알림으로 알 수 있다. 이때 reconcileStep은 ABANDONED가 되어 같은 날짜로 다시 띄워도 다시 돌지 않으므로, 재큐잉은 `reconcileJob targetDate=D`로 따로 돌린다.
+- 1–2가 실패하면(재큐잉 일부 실패, S3 조회 실패 등) 뒤 Step은 그대로 진행해 Swift에 있는 파일을 적재하고, Job은 FAILED로 끝난다. 종료 코드가 0이 아니라 K8s CronJob 실패 알림으로 알 수 있다. 이때 실패한 Step은 ABANDONED가 되어 같은 날짜로 다시 띄워도 다시 돌지 않으므로, 재큐잉은 `reconcileJob targetDate=D`로 따로 돌린다.
 - 대기 시간 안에 복사되지 않은 파일은 경고 로그에 건수와 앞부분 10개 키가 남는다. 복사된 뒤 `ingestJob targetDate=D rerun=2`로 다시 적재한다. 자동 재검토 Job은 아직 없다.
 - 특정 날짜를 돌릴 때는 `--ubi.batch.daily.target-date=2026-11-20`을 주거나 개별 Job(`reconcileJob`, `ingestJob`, `scoreJob`)을 쓴다. 개별 Job은 수동 재실행용으로 남겨 둔다.
 - dailyJob과 개별 Job을 같은 시각에 함께 돌리지 않는다. 같은 trip을 동시에 처음 만들면 유니크 충돌로 실패한다(IngestFileWriter TODO).
