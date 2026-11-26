@@ -45,7 +45,6 @@ import com.pikachew.dangUBI.batch.reconcile.port.ObjectRef;
 import com.pikachew.dangUBI.batch.reconcile.port.RawObjectStore;
 import com.pikachew.dangUBI.batch.reconcile.port.RequeuePublisher;
 import com.pikachew.dangUBI.batch.reconcile.port.SourceObjectStore;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
 import com.pikachew.dangUBI.domain.outbox.repository.OutboxRepository;
@@ -75,9 +74,6 @@ class DailyJobTest {
 
 	@Autowired
 	private JobRepositoryTestUtils jobRepositoryTestUtils;
-
-	@Autowired
-	private DriverRepository driverRepository;
 
 	@Autowired
 	private TripRepository tripRepository;
@@ -128,7 +124,6 @@ class DailyJobTest {
 		segmentRepository.deleteAllInBatch();
 		microtripRepository.deleteAllInBatch();
 		tripRepository.deleteAllInBatch();
-		driverRepository.deleteAllInBatch();
 	}
 
 	@Test

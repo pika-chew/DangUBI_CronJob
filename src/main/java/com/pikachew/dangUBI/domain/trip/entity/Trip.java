@@ -3,19 +3,15 @@ package com.pikachew.dangUBI.domain.trip.entity;
 import java.time.Instant;
 
 import com.pikachew.dangUBI.domain.common.entity.BaseTimeEntity;
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
 import com.pikachew.dangUBI.domain.trip.model.TripSnapshot;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -39,10 +35,6 @@ public class Trip extends BaseTimeEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "driver_id", nullable = false)
-	private Driver driver;
 
 	@Column(nullable = false, length = 64)
 	private String vehicleId;
@@ -76,8 +68,7 @@ public class Trip extends BaseTimeEntity {
 
 	/** 처음 본 trip은 진행 중 상태로 만든다. ty=3이 먼저 오면 바로 {@link #complete}가 이어진다 */
 	@Builder
-	private Trip(Driver driver, String vehicleId, long tid) {
-		this.driver = driver;
+	private Trip(String vehicleId, long tid) {
 		this.vehicleId = vehicleId;
 		this.tid = tid;
 		this.status = TripStatus.IN_PROGRESS;

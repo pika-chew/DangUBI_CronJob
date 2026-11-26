@@ -7,12 +7,8 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
-
 /** 단위 테스트: Trip 상태 변경 규칙. */
 class TripTest {
-
-	private final Driver driver = Driver.builder().vehicleId("vehicle-001").build();
 
 	@Test
 	void 적재_시각은_마지막으로_남긴_값이다() {
@@ -87,7 +83,6 @@ class TripTest {
 
 	private Trip newTrip() {
 		return Trip.builder()
-				.driver(driver)
 				.vehicleId("vehicle-001")
 				.tid(354)
 				.build();

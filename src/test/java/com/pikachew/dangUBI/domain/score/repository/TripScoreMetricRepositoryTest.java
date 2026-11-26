@@ -12,8 +12,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.score.entity.ScoreTally;
 import com.pikachew.dangUBI.domain.score.entity.TripScoreMetric;
 import com.pikachew.dangUBI.domain.trip.entity.Trip;
@@ -29,9 +27,6 @@ class TripScoreMetricRepositoryTest {
 
 	@Autowired
 	private TripScoreMetricRepository metricRepository;
-
-	@Autowired
-	private DriverRepository driverRepository;
 
 	@Autowired
 	private TripRepository tripRepository;
@@ -64,8 +59,8 @@ class TripScoreMetricRepositoryTest {
 	}
 
 	private Trip savedTrip(long tid) {
-		Driver driver = driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
-		return tripRepository.save(Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(tid).build());
+		String vehicleId = "0DS614RB2TT925001";
+		return tripRepository.save(Trip.builder().vehicleId(vehicleId).tid(tid).build());
 	}
 
 	private static TripScoreMetric metric(Trip trip, ScoreTally tally) {
