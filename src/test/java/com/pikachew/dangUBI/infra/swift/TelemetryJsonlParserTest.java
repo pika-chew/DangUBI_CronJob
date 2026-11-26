@@ -77,6 +77,19 @@ public class TelemetryJsonlParserTest {
 	}
 
 	@Test
+	void 소수인_ty3_요약값은_반올림한다() {
+		String line = TRIP_LINE.replace("\"dis\":30000,\"hsts\":90,\"mesp\":30,\"dtvt\":3600",
+				"\"dis\":29381.570831045887,\"hsts\":100.00000000000001,\"mesp\":40.99754069448263,\"dtvt\":2471.952782064332");
+
+		TripSnapshot trip = (TripSnapshot) TelemetryJsonlParser.parseLine(line);
+
+		assertThat(trip.distance()).isEqualTo(29382);
+		assertThat(trip.maxSpeed()).isEqualTo(100);
+		assertThat(trip.avgSpeed()).isEqualTo(41);
+		assertThat(trip.drivingTime()).isEqualTo(2472);
+	}
+
+	@Test
 	void 빠진_요약_필드는_null이다() {
 		TripSnapshot trip = (TripSnapshot) TelemetryJsonlParser.parseLine(TRIP_LINE.replace(",\"hsts\":90", ""));
 
