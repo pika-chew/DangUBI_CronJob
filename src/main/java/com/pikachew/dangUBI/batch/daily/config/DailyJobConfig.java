@@ -29,7 +29,7 @@ import com.pikachew.dangUBI.batch.daily.tasklet.RequeueWaitTasklet;
  * 특정 날짜를 돌리려면 --ubi.batch.daily.target-date=2026-11-20을 주거나 개별 Job(reconcileJob, ingestJob, scoreJob)을 쓴다.
  *
  * 1. reconcileStep: S3와 Swift를 비교해 누락 파일을 재큐잉한다. 실패해도 다음 Step으로 넘어간다
- * 2. dailyRequeueWaitStep: 재큐잉한 파일이 Swift에 복사될 때까지 기다린다 (최대 requeue-wait-timeout)
+ * 2. dailyRequeueWaitStep: S3와 Swift를 다시 비교해 Swift에 없는 파일이 복사될 때까지 기다린다 (최대 requeue-wait-timeout)
  * 3. ingestFileStep: Swift 파일을 MySQL에 적재한다
  * 4. scoreMetricStep → scoreReportStep: 점수 지표와 하루 리포트·outbox 이벤트를 남긴다
  * 3–4가 실패하면 Job을 멈춘다. 같은 날짜로 다시 띄우면 실패한 Step부터 이어서 처리한다.

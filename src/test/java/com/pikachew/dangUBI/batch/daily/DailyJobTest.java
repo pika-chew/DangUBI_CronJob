@@ -134,8 +134,11 @@ class DailyJobTest {
 	@Test
 	void 누락_파일을_재큐잉하고_복사를_기다린_뒤_적재와_점수까지_끝낸다() throws Exception {
 		given(sourceObjectStore.listObjects(DATE)).willReturn(objects(FILE_A, FILE_B));
-		// reconcile 때는 B가 없고, 기다리는 동안 수집 워커가 B를 복사한다
-		given(rawObjectStore.listObjects(DATE)).willReturn(objects(FILE_A)).willReturn(objects(FILE_A, FILE_B));
+		// reconcile과 대기 시작 때는 B가 없고, 기다리는 동안 수집 워커가 B를 복사한다
+		given(rawObjectStore.listObjects(DATE))
+				.willReturn(objects(FILE_A))
+				.willReturn(objects(FILE_A))
+				.willReturn(objects(FILE_A, FILE_B));
 		given(requeuePublisher.publish(any())).willAnswer(invocation -> invocation.<List<?>>getArgument(0).size());
 		givenTwoFiles();
 

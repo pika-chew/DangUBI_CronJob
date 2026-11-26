@@ -17,6 +17,9 @@ public final class DailyStaticValues {
 	/** @StepScope 빈에 targetDate를 주입하는 표현식 */
 	public static final String DAILY_TARGET_DATE_EXPRESSION = "#{jobParameters['" + DAILY_TARGET_DATE_PARAM + "']}";
 
+	/** 복사되지 않은 키를 경고 로그에 남길 때 앞에서부터 찍는 개수 */
+	public static final int DAILY_LOG_KEY_SAMPLE_SIZE = 10;
+
 	// 설정 (application.yaml)
 	public static final String DAILY_PROPERTY_PREFIX = "ubi.batch.daily";
 
