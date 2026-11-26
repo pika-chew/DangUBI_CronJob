@@ -63,7 +63,7 @@ class TripScoreMetricRepositoryTest {
 				.isInstanceOf(DataIntegrityViolationException.class);
 	}
 
-	private Trip savedTrip(int tid) {
+	private Trip savedTrip(long tid) {
 		Driver driver = driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
 		return tripRepository.save(Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(tid).build());
 	}

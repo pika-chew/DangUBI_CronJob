@@ -149,7 +149,7 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 			return new HashMap<>();
 		}
 		Set<String> vehicleIds = keys.stream().map(TripKey::vehicleId).collect(Collectors.toSet());
-		Set<Integer> tids = keys.stream().map(TripKey::tid).collect(Collectors.toSet());
+		Set<Long> tids = keys.stream().map(TripKey::tid).collect(Collectors.toSet());
 		return tripRepository.findAllByVehicleIdInAndTidIn(vehicleIds, tids).stream()
 				.filter(trip -> keys.contains(new TripKey(trip.getVehicleId(), trip.getTid())))
 				.collect(Collectors.toMap(trip -> new TripKey(trip.getVehicleId(), trip.getTid()), Function.identity(),
@@ -246,7 +246,7 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 				.build();
 	}
 
-	private record TripKey(String vehicleId, int tid) {
+	private record TripKey(String vehicleId, long tid) {
 	}
 
 }

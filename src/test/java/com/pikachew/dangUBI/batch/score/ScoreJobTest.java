@@ -82,7 +82,7 @@ class ScoreJobTest {
 	@Qualifier(SCORE_JOB_NAME)
 	private Job scoreJob;
 
-	private int tid;
+	private long tid;
 
 	/** Job이 여러 개면 JobOperatorTestUtils가 Job을 고르지 않으므로 직접 지정한다 */
 	@BeforeEach

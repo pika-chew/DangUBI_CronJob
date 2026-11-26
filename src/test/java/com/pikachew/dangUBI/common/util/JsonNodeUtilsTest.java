@@ -34,6 +34,30 @@ class JsonNodeUtilsTest {
 	}
 
 	@Test
+	void toRoundedInteger는_소수를_반올림한다() {
+		JsonNode decimals = JsonMapper.shared().readTree("""
+				{"down":42.392873068822745,"up":43.5,"decText":"40.7"}""");
+
+		assertThat(JsonNodeUtils.toRoundedInteger(decimals.get("down"))).isEqualTo(42);
+		assertThat(JsonNodeUtils.toRoundedInteger(decimals.get("up"))).isEqualTo(44);
+		assertThat(JsonNodeUtils.toRoundedInteger(decimals.get("decText"))).isEqualTo(41);
+		assertThat(JsonNodeUtils.toRoundedInteger(node.get("int"))).isEqualTo(72);
+		assertThat(JsonNodeUtils.toRoundedInteger(node.get("numText"))).isEqualTo(72);
+	}
+
+	@Test
+	void toRoundedInteger는_숫자가_아니거나_int_범위를_넘으면_null이다() {
+		JsonNode huge = JsonMapper.shared().readTree("""
+				{"huge":1e20,"nan":"NaN"}""");
+
+		assertThat(JsonNodeUtils.toRoundedInteger(huge.get("huge"))).isNull();
+		assertThat(JsonNodeUtils.toRoundedInteger(huge.get("nan"))).isNull();
+		assertThat(JsonNodeUtils.toRoundedInteger(node.get("word"))).isNull();
+		assertThat(JsonNodeUtils.toRoundedInteger(node.get("nil"))).isNull();
+		assertThat(JsonNodeUtils.toRoundedInteger(node.get("missing"))).isNull();
+	}
+
+	@Test
 	void 비어_있지_않은_문자열만_꺼낸다() {
 		assertThat(JsonNodeUtils.toNonBlankText(node.get("word"))).isEqualTo("fast");
 		assertThat(JsonNodeUtils.toNonBlankText(node.get("blank"))).isNull();

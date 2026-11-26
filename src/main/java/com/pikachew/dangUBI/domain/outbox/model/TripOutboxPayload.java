@@ -5,6 +5,6 @@ public record TripOutboxPayload(
 		Long tripId,
 		Long driverId,
 		String vehicleId,
-		int tid
+		long tid
 ) {
 }

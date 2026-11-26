@@ -15,6 +15,6 @@ public sealed interface TelemetrySnapshot permits TripSnapshot, MicrotripSnapsho
 	/** envelope의 ts. Lambda가 받은 시각으로 보인다. 없으면 null */
 	Instant receivedAt();
 
-	int tid();
+	long tid();
 
 }
