@@ -30,7 +30,7 @@ import com.pikachew.dangUBI.domain.trip.repository.TripRepository;
 /** 단위 테스트: trip 하나를 점수 지표로 바꾼다 */
 class TripScoreMetricProcessorTest {
 
-	private static final ScoreProperties PROPERTIES = new ScoreProperties("standard", 100, Duration.ofSeconds(4),
+	private static final ScoreProperties PROPERTIES = new ScoreProperties("standard", 100, Duration.ofSeconds(4), Duration.ZERO,
 			new ScoreWeights(120, 90, 200, 100), Map.of(1, 0.40), Map.of("standard", new ScoreProperties.Basis(125, 1500)));
 
 	private final TripRepository tripRepository = mock(TripRepository.class);

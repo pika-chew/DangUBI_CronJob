@@ -29,6 +29,8 @@ ubi:
     score:
       # 구간 50km, 반영 범위 600km로 짧게 돌린다
       basis: test
+      # 방금 넣은 trip도 바로 점수를 매긴다
+      settle-delay: 0s
   # 외부 저장소 가짜 값. 접속하지 않는다.
   s3:
     bucket: test-source

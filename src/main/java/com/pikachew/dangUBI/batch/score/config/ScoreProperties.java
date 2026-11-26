@@ -23,6 +23,7 @@ import com.pikachew.dangUBI.domain.score.model.ScoreWeights;
  * @param basis        쓸 기준 이름. 없으면 운영 기준(standard). bases에 없는 이름이면 앱이 뜨지 않는다
  * @param chunkSize    chunk 하나에 담는 trip 수(지표 Step)와 운전자 수(리포트 Step)
  * @param maneuverGap  같은 기동으로 묶는 microtrip 간격
+ * @param settleDelay  trip이 마지막으로 적재된 뒤 이만큼 지나야 점수 지표를 만든다. 늦게 적재된 microtrip을 놓치지 않으려는 대기 시간
  * @param weights      이벤트 묶음별 가중치
  * @param nightRates   KST 시간대(0–23) → 야간 추가 감점률. 없는 시간대는 0
  * @param bases        기준 이름 → 구간 거리·반영 범위
@@ -32,6 +33,7 @@ public record ScoreProperties(
 		String basis,
 		int chunkSize,
 		Duration maneuverGap,
+		Duration settleDelay,
 		ScoreWeights weights,
 		Map<Integer, Double> nightRates,
 		Map<String, Basis> bases

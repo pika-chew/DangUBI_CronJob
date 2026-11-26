@@ -25,6 +25,7 @@ class ScorePropertiesTest {
 		ScoreProperties properties = load();
 
 		assertThat(properties.maneuverGap()).isEqualTo(Duration.ofSeconds(4));
+		assertThat(properties.settleDelay()).isEqualTo(Duration.ofHours(24));
 		assertThat(properties.weights()).isEqualTo(new ScoreWeights(120, 90, 200, 100));
 		assertThat(properties.nightRates()).containsOnlyKeys(23, 0, 1, 2, 3).containsEntry(1, 0.40);
 	}
@@ -58,7 +59,7 @@ class ScorePropertiesTest {
 	}
 
 	private static ScoreProperties withBasis(ScoreProperties properties, String basis) {
-		return new ScoreProperties(basis, properties.chunkSize(), properties.maneuverGap(), properties.weights(),
+		return new ScoreProperties(basis, properties.chunkSize(), properties.maneuverGap(), properties.settleDelay(), properties.weights(),
 				properties.nightRates(), properties.bases());
 	}
 

@@ -36,6 +36,8 @@ ubi:
       chunk-size: 100
       # 같은 묶음이 이 간격 안에 이어지면 한 번의 기동으로 센다. microtrip 전송 주기 2초 × 2
       maneuver-gap: 4s
+      # trip이 마지막으로 적재된 뒤 이만큼 지나야 점수를 매긴다. 늦게 복사된 파일을 rerun으로 다시 적재할 시간을 둔다
+      settle-delay: 24h
       # 과속거리 1km당, 급가속·급감속·급회전 1회당 가중치
       weights:
         overspeed: 120
