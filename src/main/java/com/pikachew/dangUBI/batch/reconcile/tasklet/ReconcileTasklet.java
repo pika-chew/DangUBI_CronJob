@@ -75,8 +75,8 @@ public class ReconcileTasklet implements Tasklet {
 		return RepeatStatus.FINISHED;
 	}
 
-	/** S3에는 있고 Swift에는 없는 객체를 키 순서로 돌려준다. */
-	static List<ObjectRef> findMissing(List<ObjectRef> sourceObjects, List<ObjectRef> rawObjects) {
+	/** S3에는 있고 Swift에는 없는 객체를 키 순서로 돌려준다. dailyJob의 복사 대기 Step도 같은 기준으로 쓴다. */
+	public static List<ObjectRef> findMissing(List<ObjectRef> sourceObjects, List<ObjectRef> rawObjects) {
 		Set<String> rawKeys = rawObjects.stream()
 				.map(ObjectRef::key)
 				.collect(Collectors.toSet());

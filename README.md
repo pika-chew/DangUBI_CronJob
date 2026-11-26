@@ -17,7 +17,7 @@ java -jar build/libs/dangUBI-0.0.1-SNAPSHOT.jar \
 
 - `local` 프로필은 테이블을 자동으로 만든다.
   - Spring Batch 메타 테이블(`BATCH_*`): `spring.batch.jdbc.initialize-schema=always`
-  - 업무 테이블(`driver`, `trip`, `trip_microtrip`): `src/main/resources/db/trip-schema-mysql.sql`
+  - 업무 테이블(`driver`, `trip`, `trip_microtrip`, `outbox`): `src/main/resources/db/trip-schema-mysql.sql`
 - 운영은 둘 다 자동으로 만들지 않는다. 배포 전에 `spring-batch-core` jar 안의 `org/springframework/batch/core/schema-mysql.sql`과 `db/trip-schema-mysql.sql`을 실행해 둔다.
 - Job 파라미터는 `key=value` 형식으로 넘긴다. 같은 파라미터로 이미 COMPLETED된 Job은 다시 돌지 않는다.
 - 종료 코드: 성공 0, 실패 1.

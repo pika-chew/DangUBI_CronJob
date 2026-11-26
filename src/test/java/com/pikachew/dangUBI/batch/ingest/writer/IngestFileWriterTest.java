@@ -3,6 +3,7 @@ package com.pikachew.dangUBI.batch.ingest.writer;
 import static com.pikachew.dangUBI.domain.trip.model.TripSnapshotFixtures.microtrip;
 import static com.pikachew.dangUBI.domain.trip.model.TripSnapshotFixtures.trip;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 
 import java.time.Instant;
 import java.util.List;
@@ -16,6 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pikachew.dangUBI.batch.ingest.dto.ParsedTelemetryFile;
 import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
+import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
+import com.pikachew.dangUBI.domain.outbox.entity.OutboxAggregateType;
+import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
+import com.pikachew.dangUBI.domain.outbox.entity.OutboxStatus;
+import com.pikachew.dangUBI.domain.outbox.model.TripOutboxPayload;
+import com.pikachew.dangUBI.domain.outbox.repository.OutboxRepository;
 import com.pikachew.dangUBI.domain.trip.entity.Trip;
 import com.pikachew.dangUBI.domain.trip.entity.TripMicrotrip;
 import com.pikachew.dangUBI.domain.trip.entity.TripStatus;
@@ -25,6 +32,7 @@ import com.pikachew.dangUBI.domain.trip.repository.TripMicrotripRepository;
 import com.pikachew.dangUBI.domain.trip.repository.TripRepository;
 
 import jakarta.persistence.EntityManager;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * DB 통합 테스트: H2에 운영과 같은 DDL로 테이블을 만들고 Writer의 적재 결과를 확인한다.
@@ -38,6 +46,7 @@ class IngestFileWriterTest {
 	private static final String V1 = "vehicle-001";
 	private static final String TRIP_START = "2026-11-10T10:00:00Z";
 	private static final String TRIP_END = "2026-11-10T11:00:00Z";
+	private static final Instant LONG_AGO = Instant.parse("2000-01-01T00:00:00Z");
 
 	@Autowired
 	private IngestFileWriter writer;
@@ -50,6 +59,9 @@ class IngestFileWriterTest {
 
 	@Autowired
 	private TripMicrotripRepository microtripRepository;
+
+	@Autowired
+	private OutboxRepository outboxRepository;
 
 	@Autowired
 	private EntityManager entityManager;
@@ -192,6 +204,109 @@ class IngestFileWriterTest {
 		assertThat(trip.getCreatedAt()).isNotNull();
 		assertThat(trip.getUpdatedAt()).isNotNull();
 		assertThat(trip.getDriver().getCreatedAt()).isNotNull();
+	}
+
+	@Test
+	void 새_trip을_만들면_식별자만_담은_TRIP_STARTED를_남긴다() {
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+
+		Trip trip = findTrip(V1, 354);
+		List<Outbox> outboxes = findOutboxes(trip);
+		assertThat(outboxes).extracting(Outbox::getEventType, Outbox::getStatus)
+				.containsExactly(tuple(OutboxEventType.TRIP_STARTED, OutboxStatus.PENDING));
+		assertThat(JsonMapper.shared().readValue(outboxes.get(0).getPayload(), TripOutboxPayload.class))
+				.isEqualTo(new TripOutboxPayload(trip.getId(), trip.getDriver().getId(), V1, 354));
+	}
+
+	@Test
+	void ty3만_오면_TRIP_STARTED와_TRIP_COMPLETED를_순서대로_남긴다() {
+		write(List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000)), List.of());
+
+		assertThat(findOutboxes(findTrip(V1, 354))).extracting(Outbox::getEventType)
+				.containsExactly(OutboxEventType.TRIP_STARTED, OutboxEventType.TRIP_COMPLETED);
+	}
+
+	@Test
+	void 진행_중인_trip이_다른_chunk에서_종료되면_TRIP_COMPLETED만_더한다() {
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+		write(List.of(), List.of(microtrip(V1, 354, "m2", TRIP_END)));
+		write(List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000)), List.of());
+
+		assertThat(findOutboxes(findTrip(V1, 354))).extracting(Outbox::getEventType)
+				.containsExactly(OutboxEventType.TRIP_STARTED, OutboxEventType.TRIP_COMPLETED);
+	}
+
+	@Test
+	void 이미_종료된_trip의_ty3을_다시_받으면_이벤트를_남기지_않는다() {
+		List<TripSnapshot> trips = List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000));
+		List<MicrotripSnapshot> microtrips = List.of(microtrip(V1, 354, "m1", TRIP_START));
+
+		write(trips, microtrips);
+		write(trips, microtrips);
+
+		assertThat(outboxRepository.count()).isEqualTo(2);
+	}
+
+	@Test
+	void 한_chunk_안에_같은_trip의_ty3이_여러_번_있어도_TRIP_COMPLETED는_하나다() {
+		TripSnapshot snapshot = trip(V1, 354, TRIP_START, TRIP_END, 30000);
+
+		writer.write(new Chunk<>(file("a", List.of(snapshot), List.of()), file("b", List.of(snapshot), List.of())));
+		flushAndClear();
+
+		assertThat(findOutboxes(findTrip(V1, 354))).extracting(Outbox::getEventType)
+				.containsExactly(OutboxEventType.TRIP_STARTED, OutboxEventType.TRIP_COMPLETED);
+	}
+
+	@Test
+	void microtrip만_다시_와도_이벤트를_남기지_않는다() {
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+		write(List.of(), List.of(microtrip(V1, 354, "m2", TRIP_END)));
+
+		assertThat(outboxRepository.count()).isEqualTo(1);
+	}
+
+	@Test
+	void 새_데이터를_받은_trip에는_적재_시각을_남긴다() {
+		Instant before = Instant.now().minusSeconds(1);
+
+		write(List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000)), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+
+		assertThat(findTrip(V1, 354).getLastIngestedAt()).isAfter(before);
+	}
+
+	@Test
+	void 수집_범위_안쪽의_microtrip이_늦게_와도_적재_시각을_다시_남긴다() {
+		write(List.of(), List.of(
+				microtrip(V1, 354, "m1", "2026-11-10T10:00:00Z"),
+				microtrip(V1, 354, "m3", "2026-11-10T10:30:00Z")));
+		markIngestedLongAgo(V1, 354);
+
+		write(List.of(), List.of(microtrip(V1, 354, "m2", "2026-11-10T10:15:00Z")));
+
+		Trip trip = findTrip(V1, 354);
+		assertThat(trip.getFirstCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:00:00Z"));
+		assertThat(trip.getLastCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:30:00Z"));
+		assertThat(trip.getLastIngestedAt()).isAfter(LONG_AGO);
+	}
+
+	@Test
+	void 이미_저장된_microtrip만_다시_오면_적재_시각을_바꾸지_않는다() {
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+		markIngestedLongAgo(V1, 354);
+
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+
+		assertThat(findTrip(V1, 354).getLastIngestedAt()).isEqualTo(LONG_AGO);
+	}
+
+	private void markIngestedLongAgo(String vehicleId, int tid) {
+		findTrip(vehicleId, tid).recordIngestedAt(LONG_AGO);
+		flushAndClear();
+	}
+
+	private List<Outbox> findOutboxes(Trip trip) {
+		return outboxRepository.findAllByAggregateTypeAndAggregateIdOrderById(OutboxAggregateType.TRIP, trip.getId());
 	}
 
 	private void write(List<TripSnapshot> trips, List<MicrotripSnapshot> microtrips) {

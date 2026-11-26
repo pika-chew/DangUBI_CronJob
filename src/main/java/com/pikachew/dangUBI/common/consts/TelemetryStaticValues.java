@@ -23,8 +23,5 @@ public final class TelemetryStaticValues {
 	public static final int TELEMETRY_SUPPORTED_SCHEMA_VERSION = 1;
 	/** em: 한 주기의 이벤트 비트마스크를 16진 1~2자리로 적은 값 */
 	public static final Pattern TELEMETRY_EVENT_MASK_HEX_PATTERN = Pattern.compile("[0-9A-Fa-f]{1,2}");
-	/** xyz: "가속도X,가속도Y,각속도Y" */
-	public static final String TELEMETRY_XYZ_DELIMITER = ",";
-	public static final int TELEMETRY_XYZ_SIZE = 3;
 
 }

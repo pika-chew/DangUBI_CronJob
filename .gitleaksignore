@@ -1,0 +1,5 @@
+# gitleaks 예외: 비밀값이 아닌 것으로 확인한 발견만 지문(커밋:파일:규칙:줄)으로 하나씩 등록한다.
+# 규칙 전체를 끄지 않아 다른 비밀값은 계속 잡는다.
+
+# 테스트에 고정한 실제 Lambda 출력의 idempotencyKey(SHA-256 해시). 이름에 Key가 있어 generic-api-key로 오인됨
+9172947ef479c9b2faa5872fdd9c3fe8c3f064ba:src/test/java/com/pikachew/dangUBI/infra/swift/TelemetryJsonlParserTest.java:generic-api-key:31

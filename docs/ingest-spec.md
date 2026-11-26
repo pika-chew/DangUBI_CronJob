@@ -82,8 +82,9 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 - 그 밖의 필드는 형식이 틀리면 그 필드만 null로 둔다.
 - 문서상 필수(M)인 필드도 실제로 빠질 수 있어 null을 허용한다.
 - 숫자 필드는 JSON 숫자와 숫자 문자열을 모두 받는다. 값은 원본 Int 그대로 두고 단위·스케일은 바꾸지 않는다.
-- `em`은 16진 문자열이다. 비트마스크로 풀어 저장한다(`"28"` = 0x28 = 급유턴 + 급가속).
-- `xyz`는 `"가속도X,가속도Y,각속도Y"`다. 세 컬럼으로 나눠 저장한다.
+- `em`은 16진 문자열이다. 비트마스크로 풀어 저장한다(`"28"` = 0x28 = 급유턴 + 급가속). 비트 정의(bit7 = 과속 포함)는 [score-spec.md](score-spec.md) 2장을 따른다.
+- trip(ty=3)은 Lambda가 보내는 요약 필드 `stt`, `edt`, `dis`(운행 누적 주행거리, m), `hsts`, `mesp`, `dtvt`만 읽어 저장한다.
+- microtrip은 점수 계산에 쓰는 `clt`, `sp`, `em`만 읽어 저장한다. 나머지 필드(`lat`, `lon`, `xyz`, `vv` 등)는 Swift 원본에만 남는다. 다시 필요해지면 컬럼을 추가하고 Swift에서 다시 적재한다.
 - `usm`(휴대폰 번호)은 개인정보라 저장하지 않는다.
 - gz가 깨진 파일은 Job을 실패시킨다. 원인을 확인한 뒤 다시 실행한다.
 
@@ -92,6 +93,7 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 - trip 키는 `(vehicleId, tid)`다.
 - microtrip이 먼저 오면 trip을 `IN_PROGRESS`로 만든다. 그리고 `clt`의 최소값·최대값을 `first_collected_at`, `last_collected_at`에 반영한다.
 - ty=3이 오면 trip을 `COMPLETED`로 바꾸고 요약값을 채운다.
+- 새 microtrip이나 ty=3을 받은 trip에는 그 chunk의 적재 시각을 `last_ingested_at`에 남긴다. scoreJob은 이 시각부터 settle-delay를 기다린다(score-spec.md 8장). 이미 저장된 microtrip만 다시 오면 바꾸지 않는다.
 - 두 메시지는 서로의 컬럼을 건드리지 않는다. status는 `IN_PROGRESS` → `COMPLETED`로만 바뀐다. 그래서 순서와 상관없이 결과가 같다.
 - 자정을 넘긴 trip은 이틀치 Job에 나뉘어 들어와도 같은 행으로 합쳐진다.
 - TODO: ty=3이 오지 않는 trip을 시간 초과로 닫는 정책.
@@ -103,16 +105,63 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 | 표 | 키 | 내용 |
 | --- | --- | --- |
 | `driver` | `vehicle_id` 유니크 | 지금은 차량 1대 = 운전자 1명 |
-| `trip` | `(vehicle_id, tid)` 유니크 | 상태, ty=3 요약값, microtrip 수집 시각 범위 |
-| `trip_microtrip` | `idempotency_key` 유니크 | microtrip 한 건. 인덱스 `(trip_id, collected_at)` |
+| `trip` | `(vehicle_id, tid)` 유니크 | 상태, ty=3 요약값(시작·종료 시각, 주행거리, 최고·평균 속도, 주행 시간), microtrip 수집 시각 범위, 마지막 적재 시각 |
+| `trip_microtrip` | `idempotency_key` 유니크 | microtrip 한 건의 수집 시각(`clt`), 속도(`sp`), 이벤트 비트(`em`). 인덱스 `(trip_id, collected_at)` |
+| `outbox` | `(aggregate_type, aggregate_id, event_type)` 유니크 | 적재와 같은 트랜잭션에서 남기는 발행 대기 이벤트. 인덱스 `(status, id)` |
+
+### outbox 이벤트
+
+ingestJob Writer가 trip을 저장하는 chunk 트랜잭션 안에서 함께 기록한다. 적재가 롤백되면 이벤트도 남지 않는다.
+
+| event_type | 기록 시점 |
+| --- | --- |
+| `TRIP_STARTED` | trip을 처음 만들 때. ty=3이 먼저 와도 생성 이벤트가 먼저 남는다 |
+| `TRIP_COMPLETED` | trip이 `IN_PROGRESS`에서 `COMPLETED`로 바뀔 때. 이미 종료된 trip의 ty=3을 다시 받으면 남기지 않는다 |
+
+- `payload`는 식별자만 담은 JSON이다: `{"tripId":1,"driverId":1,"vehicleId":"vehicle-001","tid":354}`. 상세 값은 소비자가 `trip` 테이블에서 읽는다.
+- 새 행은 `status=PENDING`이다. PENDING 행을 발행하고 `PUBLISHED`로 바꾸는 relay는 아직 없다.
 
 "어디까지 읽었나"는 Spring Batch 실행 기록(`targetDate`별 JobInstance)으로 관리한다. 파일별 처리 기록 표는 두지 않는다.
 
 ## 8. 하루 실행 순서 (UTC)
 
-| 시각 | Job | 내용 |
-| --- | --- | --- |
-| D+1 00:30 | `reconcileJob targetDate=D` | S3와 Swift의 D일 목록을 비교해 Swift에 없는 파일을 재큐잉한다 |
-| D+1 02:00 | `ingestJob targetDate=D` | 재큐잉한 파일이 복사될 시간을 둔 뒤 D일 파일을 MySQL에 적재한다 |
+매일 **UTC 02:00(KST 11:00)**에 `dailyJob` 하나를 실행한다. 파라미터 없이 띄우면 `targetDate` = 어제(UTC) = D다.
 
-늦게 복사된 파일이 있으면 `ingestJob targetDate=D rerun=2`로 다시 적재한다.
+| 순서 | Step | 내용 |
+| --- | --- | --- |
+| 1 | `reconcileStep` | S3와 Swift의 D일 목록을 비교해 Swift에 없는 파일을 재큐잉한다 |
+| 2 | `dailyRequeueWaitStep` | S3와 Swift를 다시 비교해, Swift에 없는 파일이 없어질 때까지 기다린다. `requeue-wait-timeout`(30분)이 지나면 있는 파일로 진행한다. 기다릴 키를 Job 실행 기록(MySQL TEXT, 64KB)에 넘기지 않아 누락이 많아도 멈추지 않는다 |
+| 3 | `ingestFileStep` | D일 Swift 파일을 MySQL에 적재한다 |
+| 4 | `scoreMetricStep` → `scoreReportStep` | 적재 후 24시간이 지난 trip의 점수 지표와 차량 리포트·outbox 이벤트를 남긴다 (score-spec.md 8장) |
+
+- 3–4가 실패하면 Job을 멈춘다. 같은 날짜로 다시 띄우면(같은 날 다시 실행) 실패한 Step부터 이어서 처리한다.
+- 1–2가 실패하면(재큐잉 일부 실패, S3 조회 실패 등) 뒤 Step은 그대로 진행해 Swift에 있는 파일을 적재하고, Job은 FAILED로 끝난다. 종료 코드가 0이 아니라 K8s CronJob 실패 알림으로 알 수 있다. 이때 실패한 Step은 ABANDONED가 되어 같은 날짜로 다시 띄워도 다시 돌지 않으므로, 재큐잉은 `reconcileJob targetDate=D`로 따로 돌린다.
+- 대기 시간 안에 복사되지 않은 파일은 경고 로그에 건수와 앞부분 10개 키가 남는다. 복사된 뒤 `ingestJob targetDate=D rerun=2`로 다시 적재한다. 자동 재검토 Job은 아직 없다.
+- 특정 날짜를 돌릴 때는 `--ubi.batch.daily.target-date=2026-11-20`을 주거나 개별 Job(`reconcileJob`, `ingestJob`, `scoreJob`)을 쓴다. 개별 Job은 수동 재실행용으로 남겨 둔다.
+- dailyJob과 개별 Job을 같은 시각에 함께 돌리지 않는다. 같은 trip을 동시에 처음 만들면 유니크 충돌로 실패한다(IngestFileWriter TODO).
+
+### K8s CronJob (GitOps 레포)
+
+CronJob 매니페스트는 DangUBI_GitOps 레포에 있다. 기존 `reconcileJob`·`ingestJob` CronJob을 내리고 아래 하나로 바꾼다. env·Secret·imagePullSecret은 기존 CronJob과 같게 둔다.
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dangubi-daily
+spec:
+  schedule: "0 2 * * *"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid        # 전날 실행이 길어져도 겹치지 않게
+  startingDeadlineSeconds: 3600
+  jobTemplate:
+    spec:
+      backoffLimit: 0              # 재시도는 같은 날짜로 수동 실행 (실패한 Step부터 이어서 처리)
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: dangubi-cronjob
+              image: dangubi-cronjob   # kustomization.yaml images 항목의 name
+              args: ["--spring.batch.job.name=dailyJob"]
+```
