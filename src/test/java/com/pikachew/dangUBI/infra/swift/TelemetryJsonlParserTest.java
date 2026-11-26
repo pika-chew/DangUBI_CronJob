@@ -112,6 +112,14 @@ public class TelemetryJsonlParserTest {
 	}
 
 	@Test
+	void 소수인_sp는_반올림한다() {
+		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(LAMBDA_MICROTRIP_LINE);
+
+		assertThat(microtrip.speed()).isEqualTo(42);
+		assertThat(microtrip.eventMask()).isZero();
+	}
+
+	@Test
 	void 점수에_쓰지_않는_microtrip_필드는_읽지_않는다() {
 		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(
 				microtripPld("\"sp\":70,\"lat\":37.5665,\"vv\":12.6,\"xyz\":\"0.12,-0.05,0.98\",\"rpm\":2000"));

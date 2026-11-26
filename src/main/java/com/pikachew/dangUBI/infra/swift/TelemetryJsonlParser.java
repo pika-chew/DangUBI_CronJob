@@ -38,6 +38,7 @@ import tools.jackson.databind.json.JsonMapper;
  * - 지원하지 않는 ty·schemaVersion인 줄도 버린다.
  * - 나머지 필드는 형식이 틀리면 그 필드만 null로 두고 경고 로그를 남긴다. 원본은 Swift에 남아 있다.
  * - 숫자 필드는 JSON 숫자와 숫자 문자열을 모두 받는다.
+ * - microtrip의 sp는 소수로 오므로 반올림해 정수로 둔다.
  *
  * ============================================================================================
  * [MEMORY RISK] 파일 하나를 통째로 메모리에 올린다 — 장애 테스트 필수 확인 지점
@@ -132,7 +133,7 @@ public final class TelemetryJsonlParser {
 			case TELEMETRY_TY_MICROTRIP -> {
 				Instant collectedAt = Instant.ofEpochMilli(requiredLong(pld, "clt"));
 				yield new MicrotripSnapshot(vehicleId, idempotencyKey, receivedAt, tid, collectedAt,
-						fields.integer(pld, "sp"),
+						fields.roundedInteger(pld, "sp"),
 						fields.eventMask(pld));
 			}
 			default -> throw new InvalidTelemetryLineException("지원하지 않는 ty: " + ty);
@@ -172,6 +173,16 @@ public final class TelemetryJsonlParser {
 				return null;
 			}
 			Integer value = JsonNodeUtils.toInteger(node);
+			return value == null ? invalid(name, node) : value;
+		}
+
+		/** sp처럼 Lambda가 소수로 보내는 필드. 소수점 아래는 점수 계산에 쓰지 않아 반올림한다 */
+		Integer roundedInteger(JsonNode parent, String name) {
+			JsonNode node = parent.get(name);
+			if (JsonNodeUtils.isAbsent(node)) {
+				return null;
+			}
+			Integer value = JsonNodeUtils.toRoundedInteger(node);
 			return value == null ? invalid(name, node) : value;
 		}
 

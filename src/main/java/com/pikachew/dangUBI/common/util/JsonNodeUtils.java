@@ -35,6 +35,32 @@ public final class JsonNodeUtils {
 		return value.intValue();
 	}
 
+	/** JSON 숫자 또는 숫자 문자열("42.39")을 반올림한 값이 int 범위 안이면 값을, 아니면 null. */
+	public static Integer toRoundedInteger(JsonNode node) {
+		Double value = toDouble(node);
+		if (value == null || value.isNaN() || value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
+			return null;
+		}
+		return (int) Math.round(value);
+	}
+
+	private static Double toDouble(JsonNode node) {
+		if (node == null) {
+			return null;
+		}
+		if (node.isNumber()) {
+			return node.doubleValue();
+		}
+		if (node.isString()) {
+			try {
+				return Double.parseDouble(node.stringValue().trim());
+			} catch (NumberFormatException e) {
+				return null;
+			}
+		}
+		return null;
+	}
+
 	/** 비어 있지 않은 JSON 문자열이면 값을, 아니면 null. */
 	public static String toNonBlankText(JsonNode node) {
 		if (node == null || !node.isString() || node.stringValue().isBlank()) {
