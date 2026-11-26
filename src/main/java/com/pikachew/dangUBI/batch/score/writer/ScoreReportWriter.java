@@ -1,7 +1,11 @@
 package com.pikachew.dangUBI.batch.score.writer;
 
+import static com.pikachew.dangUBI.common.consts.ScoreStaticValues.SCORE_EVENT_SCALE;
+import static com.pikachew.dangUBI.common.consts.ScoreStaticValues.SCORE_METERS_PER_KM;
 import static com.pikachew.dangUBI.common.consts.ScoreStaticValues.SCORE_ZONE;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.OptionalDouble;
@@ -38,6 +42,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 1. 구간에 묶이지 않은 지표를 쌓아 구간 거리를 넘을 때마다 구간을 닫는다. 채우지 못한 나머지는 다음 실행까지 남는다.
  * 2. 리포트에 담기지 않은 지표를 "오늘" 카운트로, 최근 반영 범위 안 구간을 반영 감점으로 리포트 하나를 만든다.
  * 3. 리포트를 대상으로 VEHICLE_SCORE_REPORTED를 outbox에 남긴다. 리포트와 같은 chunk 트랜잭션이다.
+ *    query server가 DB를 조회하지 않도록 payload에 점수·추이·카운트를 담는다.
  * 처리한 지표에는 구간·리포트가 채워지므로 다시 실행해도 같은 구간·리포트를 두 번 만들지 않는다.
  *
  * TODO: 두 실행이 같은 차량을 동시에 처리하면 구간 순번 유니크 충돌로 chunk가 실패한다. 지금은 CronJob 동시 실행 금지로 막는다.
@@ -97,15 +102,17 @@ public class ScoreReportWriter implements ItemWriter<String> {
 				.map(VehicleScoreReport::getScore)
 				.orElse(null);
 
+		List<Double> segmentScores = window.stream()
+				.map(segment -> ScorePenaltyPolicy.score(segment.getPenalty()))
+				.toList();
+
 		VehicleScoreReport report = reportRepository.save(VehicleScoreReport.builder()
 				.vehicleId(vehicleId)
 				.reportDate(reportDate)
 				.score(score)
 				.penalty(penalty.isPresent() ? penalty.getAsDouble() : null)
 				.scoreChange(score == null || previousScore == null ? null : score - previousScore)
-				.recentScores(jsonMapper.writeValueAsString(window.stream()
-						.map(segment -> ScorePenaltyPolicy.score(segment.getPenalty()))
-						.toList()))
+				.recentScores(jsonMapper.writeValueAsString(segmentScores))
 				.windowSegmentCount(window.size())
 				.today(summary(sum(unreported)))
 				.window(summary(windowTally))
@@ -116,9 +123,35 @@ public class ScoreReportWriter implements ItemWriter<String> {
 				.aggregateType(OutboxAggregateType.VEHICLE_SCORE_REPORT)
 				.aggregateId(report.getId())
 				.eventType(OutboxEventType.VEHICLE_SCORE_REPORTED)
-				.payload(jsonMapper.writeValueAsString(new VehicleScoreReportOutboxPayload(
-						report.getId(), vehicleId, reportDate.toString())))
+				.payload(jsonMapper.writeValueAsString(payload(report, segmentScores)))
 				.build());
+	}
+
+	/** 받는 쪽이 DB를 조회하지 않도록 리포트 값을 그대로 담는다. 숫자는 소수 둘째 자리로 반올림한다 */
+	private static VehicleScoreReportOutboxPayload payload(VehicleScoreReport report, List<Double> segmentScores) {
+		return new VehicleScoreReportOutboxPayload(
+				report.getId(),
+				report.getVehicleId(),
+				report.getReportDate().toString(),
+				round(report.getScore()),
+				round(report.getPenalty()),
+				round(report.getScoreChange()),
+				segmentScores.stream().map(ScoreReportWriter::round).toList(),
+				counts(report.getToday()),
+				counts(report.getWindow()));
+	}
+
+	private static VehicleScoreReportOutboxPayload.Counts counts(ScoreEventSummary summary) {
+		return new VehicleScoreReportOutboxPayload.Counts(
+				round(summary.getDistanceM() / SCORE_METERS_PER_KM),
+				round(summary.getOverspeedKm()),
+				summary.getAccelCount(),
+				summary.getBrakeCount(),
+				summary.getTurnCount());
+	}
+
+	private static Double round(Double value) {
+		return value == null ? null : BigDecimal.valueOf(value).setScale(SCORE_EVENT_SCALE, RoundingMode.HALF_UP).doubleValue();
 	}
 
 	private static ScoreTally sum(List<TripScoreMetric> metrics) {

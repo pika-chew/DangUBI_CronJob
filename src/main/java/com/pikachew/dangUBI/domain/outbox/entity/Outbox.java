@@ -44,7 +44,7 @@ public class Outbox extends BaseTimeEntity {
 	@Column(nullable = false, length = 32)
 	private OutboxEventType eventType;
 
-	/** 식별자만 담은 JSON. 상세 값은 소비자가 대상 테이블에서 읽는다 */
+	/** 이벤트 내용 JSON. trip 이벤트는 식별자만 담고, 점수 리포트 이벤트는 받는 쪽이 DB를 조회하지 않도록 값까지 담는다 */
 	@Column(nullable = false, length = 1024)
 	private String payload;
 

@@ -195,7 +195,14 @@ scoreJob은 실행할 때마다, 새로 지표를 만든 차량마다 리포트�
 
 - 이번 실행에서 닫힌 구간이 없으면 점수는 직전과 같고 변화량은 0이다. 오늘 카운트는 그대로 남긴다.
 - 리포트와 같은 chunk 트랜잭션에서 outbox에 `VEHICLE_SCORE_REPORT` / `VEHICLE_SCORE_REPORTED`를 남긴다. outbox는 `(aggregate_type, aggregate_id, event_type)`이 유니크라 차량이 아니라 리포트 행을 대상으로 한다.
-- payload는 기존 outbox 규칙대로 식별자만 담는다: `{"reportId":1,"vehicleId":"0DS614RB2TT925001","reportDate":"2026-11-25"}`. 값은 받는 쪽이 리포트 테이블에서 읽는다.
+- payload에는 받는 쪽(query server)이 DB를 조회하지 않고 처리하도록 **리포트 값을 모두 담는다**. 숫자는 소수 둘째 자리로 반올림하고, 반올림 전 값은 리포트 테이블에 남는다. 발행은 Strimzi(Kafka Connect CDC)가 outbox 테이블을 읽어서 한다.
+
+```json
+{"reportId":1,"vehicleId":"0DS614RB2TT925001","reportDate":"2026-11-26",
+ "score":70.89,"penalty":29.11,"scoreChange":null,"recentScores":[69.22,81.56,61.75,70.35],
+ "today":{"distanceKm":263.2,"overspeedKm":14.5,"accel":20,"brake":10,"turn":14},
+ "window":{"distanceKm":233.3,"overspeedKm":12.12,"accel":17,"brake":10,"turn":13}}
+```
 - 같은 날 두 번 실행하면 그 사이에 새로 종료된 trip이 있는 차량만 리포트가 하나 더 생긴다. 날짜별 유니크는 두지 않는다.
 
 ## 8. 실행
@@ -255,5 +262,4 @@ scoreJob은 실행할 때마다, 새로 지표를 만든 차량마다 리포트�
 
 | # | 항목 | 지금 구현 |
 | --- | --- | --- |
-| 1 | outbox payload에 담는 범위 | 기존 규칙대로 식별자만 담고, 값은 리포트 테이블에서 읽게 했다. 받는 쪽과 합의되면 바꾼다 |
-| 2 | 미평가 주기(`em` null)가 많은 trip | 횟수·과속거리에서 빼고 `unevaluated_count`로 남긴다. trip 제외 기준은 운영 데이터를 보고 정한다 |
+| 1 | 미평가 주기(`em` null)가 많은 trip | 횟수·과속거리에서 빼고 `unevaluated_count`로 남긴다. trip 제외 기준은 운영 데이터를 보고 정한다 |
