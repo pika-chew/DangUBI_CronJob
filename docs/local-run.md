@@ -68,6 +68,20 @@ S3·Swift·SQS 없이 reconcileJob과 ingestJob을 로컬에서 돌린다. local
 
 같은 `targetDate`로 이미 완료된 ingestJob·reconcileJob은 다시 실행되지 않는다. 다시 돌리려면 `rerun=2`처럼 이전에 쓰지 않은 파라미터를 붙이거나, DB를 비운다(`docker compose down -v`).
 
+## 하루 파이프라인 (dailyJob)
+
+운영에서는 매일 UTC 02:00에 `dailyJob`이 어제(UTC) 하루치를 reconcile → 복사 대기 → ingest → score 순서로 처리한다 (ingest-spec.md 8장). 로컬에서는 날짜를 지정해 돌린다.
+
+```bash
+scripts/make-local-sample.sh
+./gradlew bootRun --args='--spring.profiles.active=local --spring.batch.job.name=dailyJob --ubi.batch.daily.target-date=2026-11-08 --ubi.batch.score.basis=test --ubi.batch.score.settle-delay=0s'
+```
+
+- 로컬 프로필은 복사 대기를 10초로 줄여 둔다. 수집 워커가 없어 재큐잉한 sample-c는 복사되지 않으므로, 10초 뒤 경고를 남기고 있는 파일로 적재한다.
+- `settle-delay=0s`를 주지 않으면 방금 적재한 trip은 24시간 뒤 실행까지 점수를 매기지 않는다.
+- 기대 로그: `S3 3건, Swift 2건, 누락 1건` → `1건이 복사되지 않아 있는 파일로 적재를 진행함` → `ingest chunk: …` → `score report chunk: 차량 1대, …`
+- 같은 날짜로 다시 띄우면 이미 끝난 날이라 실행되지 않는다. 다시 보려면 DB를 비운다.
+
 ## 점수 시연 (더미 데이터)
 
 차량 3대(안전·보통·난폭)의 3일치 더미 수집 파일로 ingestJob → scoreJob을 돌리고 점수를 확인한다.
