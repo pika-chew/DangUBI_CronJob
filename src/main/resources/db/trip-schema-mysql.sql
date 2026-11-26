@@ -72,11 +72,11 @@ CREATE TABLE IF NOT EXISTS outbox (
     INDEX idx_outbox_status_id (status, id)
 );
 
--- scoreJob: 운전자별로 trip 지표를 쌓아 구간 거리를 넘었을 때 닫은 구간 (docs/score-spec.md 5장).
+-- scoreJob: 차량(VIN)별로 trip 지표를 쌓아 구간 거리를 넘었을 때 닫은 구간 (docs/score-spec.md 5장).
 -- 집계 컬럼은 trip_score_metric과 같다. 닫힌 구간만 저장한다.
 CREATE TABLE IF NOT EXISTS score_segment (
     id                           BIGINT       NOT NULL AUTO_INCREMENT,
-    driver_id                    BIGINT       NOT NULL,
+    vehicle_id                   VARCHAR(64)  COLLATE utf8mb4_bin  NOT NULL,
     sequence_no                  INT          NOT NULL,
     distance_m                   BIGINT       NOT NULL,
     overspeed_km                 DOUBLE       NOT NULL,
@@ -91,15 +91,14 @@ CREATE TABLE IF NOT EXISTS score_segment (
     created_at                   DATETIME(3)  NOT NULL,
     updated_at                   DATETIME(3)  NOT NULL,
     PRIMARY KEY (id),
-    CONSTRAINT uk_score_segment_driver_id_sequence_no UNIQUE (driver_id, sequence_no),
-    CONSTRAINT fk_score_segment_driver FOREIGN KEY (driver_id) REFERENCES driver (id)
+    CONSTRAINT uk_score_segment_vehicle_id_sequence_no UNIQUE (vehicle_id, sequence_no)
 );
 
--- scoreJob: 운전자 하루 리포트 (docs/score-spec.md 7장). 새로 지표를 만든 운전자마다 실행당 하나 남긴다.
+-- scoreJob: 차량 하루 리포트 (docs/score-spec.md 7장). 새로 지표를 만든 차량마다 실행당 하나 남긴다.
+-- 점수는 차량(VIN) 단위다. 한 사람이 여러 차량을 타는 경우의 합산은 받는 쪽(query server)이 한다.
 -- score·penalty는 닫힌 구간이 없으면 NULL(미산출)이다. today_*는 이 리포트에 담긴 trip, window_*는 반영 범위 안 구간의 합이다.
-CREATE TABLE IF NOT EXISTS driver_score_report (
+CREATE TABLE IF NOT EXISTS vehicle_score_report (
     id                    BIGINT         NOT NULL AUTO_INCREMENT,
-    driver_id             BIGINT         NOT NULL,
     vehicle_id            VARCHAR(64)    COLLATE utf8mb4_bin  NOT NULL,
     report_date           DATE           NOT NULL,
     score                 DOUBLE         NULL,
@@ -120,8 +119,7 @@ CREATE TABLE IF NOT EXISTS driver_score_report (
     created_at            DATETIME(3)    NOT NULL,
     updated_at            DATETIME(3)    NOT NULL,
     PRIMARY KEY (id),
-    CONSTRAINT fk_driver_score_report_driver FOREIGN KEY (driver_id) REFERENCES driver (id),
-    INDEX idx_driver_score_report_driver_id_report_date (driver_id, report_date)
+    INDEX idx_vehicle_score_report_vehicle_id_report_date (vehicle_id, report_date)
 );
 
 -- scoreJob: 종료된 trip 하나의 점수 지표. trip마다 한 번만 만든다 (docs/score-spec.md 4장).
@@ -130,7 +128,7 @@ CREATE TABLE IF NOT EXISTS driver_score_report (
 CREATE TABLE IF NOT EXISTS trip_score_metric (
     id                           BIGINT       NOT NULL AUTO_INCREMENT,
     trip_id                      BIGINT       NOT NULL,
-    driver_id                    BIGINT       NOT NULL,
+    vehicle_id                   VARCHAR(64)  COLLATE utf8mb4_bin  NOT NULL,
     ended_at                     DATETIME(3)  NOT NULL,
     distance_m                   BIGINT       NOT NULL,
     overspeed_km                 DOUBLE       NOT NULL,
@@ -149,9 +147,8 @@ CREATE TABLE IF NOT EXISTS trip_score_metric (
     PRIMARY KEY (id),
     CONSTRAINT uk_trip_score_metric_trip_id UNIQUE (trip_id),
     CONSTRAINT fk_trip_score_metric_trip FOREIGN KEY (trip_id) REFERENCES trip (id),
-    CONSTRAINT fk_trip_score_metric_driver FOREIGN KEY (driver_id) REFERENCES driver (id),
     CONSTRAINT fk_trip_score_metric_segment FOREIGN KEY (segment_id) REFERENCES score_segment (id),
-    CONSTRAINT fk_trip_score_metric_report FOREIGN KEY (report_id) REFERENCES driver_score_report (id),
-    INDEX idx_trip_score_metric_driver_id_segment_id (driver_id, segment_id),
-    INDEX idx_trip_score_metric_report_id_driver_id (report_id, driver_id)
+    CONSTRAINT fk_trip_score_metric_report FOREIGN KEY (report_id) REFERENCES vehicle_score_report (id),
+    INDEX idx_trip_score_metric_vehicle_id_segment_id (vehicle_id, segment_id),
+    INDEX idx_trip_score_metric_report_id_vehicle_id (report_id, vehicle_id)
 );

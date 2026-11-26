@@ -32,7 +32,7 @@ ubi:
     score:
       # 쓸 기준(bases의 이름). 테스트 실행은 --ubi.batch.score.basis=test
       basis: standard
-      # chunk 하나에 담는 trip 수(지표 Step)와 운전자 수(리포트 Step)
+      # chunk 하나에 담는 trip 수(지표 Step)와 차량 수(리포트 Step)
       chunk-size: 100
       # 같은 묶음이 이 간격 안에 이어지면 한 번의 기동으로 센다. microtrip 전송 주기 2초 × 2
       maneuver-gap: 4s

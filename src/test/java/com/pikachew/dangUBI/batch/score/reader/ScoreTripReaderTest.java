@@ -113,7 +113,7 @@ class ScoreTripReaderTest {
 	private static TripScoreMetric metric(Trip trip) {
 		return TripScoreMetric.builder()
 				.trip(trip)
-				.driver(trip.getDriver())
+				.vehicleId(trip.getVehicleId())
 				.endedAt(Instant.parse("2026-11-25T00:20:00Z"))
 				.tally(ScoreTally.builder().distanceM(12_000).build())
 				.build();

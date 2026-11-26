@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
 import com.pikachew.dangUBI.domain.score.entity.TripScoreMetric;
 import com.pikachew.dangUBI.domain.trip.entity.TripStatus;
 
@@ -27,17 +26,20 @@ public interface TripScoreMetricRepository extends JpaRepository<TripScoreMetric
 	List<Long> findUnscoredTripIds(@Param("status") TripStatus status, @Param("afterId") long afterId,
 			@Param("settledBefore") Instant settledBefore, Limit limit);
 
-	/** 아직 지표를 리포트에 담지 않은 운전자 id를 afterId 다음부터 id 순서로 */
+	/**
+	 * 아직 지표를 리포트에 담지 않은 차량(VIN)을 afterVehicleId 다음부터 VIN 순서로.
+	 * 비교와 정렬은 DB가 한다(vehicle_id는 utf8mb4_bin이라 대소문자를 구분한다).
+	 */
 	@Query("""
-			select distinct m.driver.id from TripScoreMetric m
-			where m.report is null and m.driver.id > :afterId
-			order by m.driver.id""")
-	List<Long> findUnreportedDriverIds(@Param("afterId") long afterId, Limit limit);
+			select distinct m.vehicleId from TripScoreMetric m
+			where m.report is null and m.vehicleId > :afterVehicleId
+			order by m.vehicleId""")
+	List<String> findUnreportedVehicleIds(@Param("afterVehicleId") String afterVehicleId, Limit limit);
 
 	/** 아직 구간에 묶이지 않은 지표를 쌓는 순서(종료 시각, id)대로 */
-	List<TripScoreMetric> findByDriverAndSegmentIsNullOrderByEndedAtAscIdAsc(Driver driver);
+	List<TripScoreMetric> findByVehicleIdAndSegmentIsNullOrderByEndedAtAscIdAsc(String vehicleId);
 
 	/** 아직 리포트에 담기지 않은 지표 */
-	List<TripScoreMetric> findByDriverAndReportIsNullOrderByEndedAtAscIdAsc(Driver driver);
+	List<TripScoreMetric> findByVehicleIdAndReportIsNullOrderByEndedAtAscIdAsc(String vehicleId);
 
 }

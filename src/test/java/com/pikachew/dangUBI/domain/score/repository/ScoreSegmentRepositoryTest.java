@@ -45,13 +45,13 @@ class ScoreSegmentRepositoryTest {
 		segmentRepository.save(segment(driver, 2));
 		segmentRepository.saveAndFlush(segment(driver, 3));
 
-		assertThat(segmentRepository.findTopByDriverOrderBySequenceNoDesc(driver).orElseThrow().getSequenceNo()).isEqualTo(3);
-		assertThat(segmentRepository.findTop100ByDriverOrderBySequenceNoDesc(driver))
+		assertThat(segmentRepository.findTopByVehicleIdOrderBySequenceNoDesc(driver.getVehicleId()).orElseThrow().getSequenceNo()).isEqualTo(3);
+		assertThat(segmentRepository.findTop100ByVehicleIdOrderBySequenceNoDesc(driver.getVehicleId()))
 				.extracting(ScoreSegment::getSequenceNo).containsExactly(3, 2, 1);
 	}
 
 	@Test
-	void 같은_운전자의_같은_순번은_두_번_저장되지_않는다() {
+	void 같은_차량의_같은_순번은_두_번_저장되지_않는다() {
 		Driver driver = savedDriver();
 		segmentRepository.saveAndFlush(segment(driver, 1));
 
@@ -68,7 +68,7 @@ class ScoreSegmentRepositoryTest {
 		segmented.assignSegment(segmentRepository.save(segment(driver, 1)));
 		metricRepository.flush();
 
-		assertThat(metricRepository.findByDriverAndSegmentIsNullOrderByEndedAtAscIdAsc(driver))
+		assertThat(metricRepository.findByVehicleIdAndSegmentIsNullOrderByEndedAtAscIdAsc(driver.getVehicleId()))
 				.containsExactly(early, late);
 	}
 
@@ -80,7 +80,7 @@ class ScoreSegmentRepositoryTest {
 		Trip trip = tripRepository.save(Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(tid).build());
 		return TripScoreMetric.builder()
 				.trip(trip)
-				.driver(driver)
+				.vehicleId(driver.getVehicleId())
 				.endedAt(Instant.parse(endedAt))
 				.tally(ScoreTally.builder().distanceM(10_000).build())
 				.build();
@@ -88,7 +88,7 @@ class ScoreSegmentRepositoryTest {
 
 	private static ScoreSegment segment(Driver driver, int sequenceNo) {
 		return ScoreSegment.builder()
-				.driver(driver)
+				.vehicleId(driver.getVehicleId())
 				.sequenceNo(sequenceNo)
 				.tally(ScoreTally.builder().distanceM(125_000).brakeCount(2).build())
 				.penalty(3.2)

@@ -17,19 +17,19 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.pikachew.dangUBI.batch.score.config.ScoreProperties;
-import com.pikachew.dangUBI.batch.score.reader.ScoreDriverReader;
+import com.pikachew.dangUBI.batch.score.reader.ScoreVehicleReader;
 import com.pikachew.dangUBI.domain.driver.entity.Driver;
 import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxAggregateType;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
 import com.pikachew.dangUBI.domain.outbox.repository.OutboxRepository;
-import com.pikachew.dangUBI.domain.score.entity.DriverScoreReport;
+import com.pikachew.dangUBI.domain.score.entity.VehicleScoreReport;
 import com.pikachew.dangUBI.domain.score.entity.ScoreEventSummary;
 import com.pikachew.dangUBI.domain.score.entity.ScoreSegment;
 import com.pikachew.dangUBI.domain.score.entity.ScoreTally;
 import com.pikachew.dangUBI.domain.score.entity.TripScoreMetric;
-import com.pikachew.dangUBI.domain.score.repository.DriverScoreReportRepository;
+import com.pikachew.dangUBI.domain.score.repository.VehicleScoreReportRepository;
 import com.pikachew.dangUBI.domain.score.repository.ScoreSegmentRepository;
 import com.pikachew.dangUBI.domain.score.repository.TripScoreMetricRepository;
 import com.pikachew.dangUBI.domain.trip.entity.Trip;
@@ -38,7 +38,7 @@ import com.pikachew.dangUBI.domain.trip.repository.TripRepository;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * DB 통합 테스트: 운전자마다 구간을 닫고 하루 리포트·outbox 이벤트를 남긴다.
+ * DB 통합 테스트: 차량(VIN)마다 구간을 닫고 하루 리포트·outbox 이벤트를 남긴다.
  * 테스트 프로필의 test 기준(구간 50km, 반영 범위 600km)과 운영 가중치(과속 120, 급가속 90, 급감속 200, 급회전 100)를 쓴다.
  */
 @SpringBootTest
@@ -59,7 +59,7 @@ class ScoreReportWriterTest {
 	private ScoreSegmentRepository segmentRepository;
 
 	@Autowired
-	private DriverScoreReportRepository reportRepository;
+	private VehicleScoreReportRepository reportRepository;
 
 	@Autowired
 	private OutboxRepository outboxRepository;
@@ -79,9 +79,9 @@ class ScoreReportWriterTest {
 		TripScoreMetric second = savedMetric(driver, "2026-11-25T01:00:00Z", tally(30_000, 2, 0));
 		TripScoreMetric rest = savedMetric(driver, "2026-11-25T02:00:00Z", tally(10_000, 0, 0));
 
-		writer().write(new Chunk<>(List.of(driver.getId())));
+		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
 
-		List<ScoreSegment> segments = segmentRepository.findTop100ByDriverOrderBySequenceNoDesc(driver);
+		List<ScoreSegment> segments = segmentRepository.findTop100ByVehicleIdOrderBySequenceNoDesc(driver.getVehicleId());
 		assertThat(segments).hasSize(1);
 		assertThat(segments.get(0).getSequenceNo()).isEqualTo(1);
 		assertThat(segments.get(0).getTally().getDistanceM()).isEqualTo(60_000);
@@ -99,9 +99,9 @@ class ScoreReportWriterTest {
 		savedMetric(driver, "2026-11-25T01:00:00Z", tally(30_000, 2, 0));
 		savedMetric(driver, "2026-11-25T02:00:00Z", tally(10_000, 0, 0));
 
-		writer().write(new Chunk<>(List.of(driver.getId())));
+		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
 
-		DriverScoreReport report = reportRepository.findTopByDriverOrderByIdDesc(driver).orElseThrow();
+		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
 		assertThat(report.getVehicleId()).isEqualTo("0DS614RB2TT925001");
 		assertThat(report.getReportDate()).isEqualTo(LocalDate.now(SCORE_ZONE));
 		assertThat(report.getPenalty()).isCloseTo(380 / 60.0, within(1e-9));
@@ -112,11 +112,11 @@ class ScoreReportWriterTest {
 		assertThat(report.getWindow()).isEqualTo(ScoreEventSummary.builder().distanceM(60_000).accelCount(2).brakeCount(1).build());
 		assertThat(jsonMapper.readValue(report.getRecentScores(), double[].class))
 				.containsExactly(new double[] {100 - 380 / 60.0}, within(1e-9));
-		assertThat(metricRepository.findByDriverAndReportIsNullOrderByEndedAtAscIdAsc(driver)).isEmpty();
+		assertThat(metricRepository.findByVehicleIdAndReportIsNullOrderByEndedAtAscIdAsc(driver.getVehicleId())).isEmpty();
 
 		List<Outbox> outboxes = outboxRepository.findAllByAggregateTypeAndAggregateIdOrderById(
-				OutboxAggregateType.DRIVER_SCORE_REPORT, report.getId());
-		assertThat(outboxes).extracting(Outbox::getEventType).containsExactly(OutboxEventType.DRIVER_SCORE_REPORTED);
+				OutboxAggregateType.VEHICLE_SCORE_REPORT, report.getId());
+		assertThat(outboxes).extracting(Outbox::getEventType).containsExactly(OutboxEventType.VEHICLE_SCORE_REPORTED);
 		assertThat(outboxes.get(0).getPayload()).contains("\"reportId\":" + report.getId(), "\"vehicleId\":\"0DS614RB2TT925001\"");
 	}
 
@@ -125,9 +125,9 @@ class ScoreReportWriterTest {
 		Driver driver = savedDriver();
 		savedMetric(driver, "2026-11-25T00:00:00Z", tally(10_000, 1, 0));
 
-		writer().write(new Chunk<>(List.of(driver.getId())));
+		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
 
-		DriverScoreReport report = reportRepository.findTopByDriverOrderByIdDesc(driver).orElseThrow();
+		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
 		assertThat(report.getScore()).isNull();
 		assertThat(report.getPenalty()).isNull();
 		assertThat(report.getRecentScores()).isEqualTo("[]");
@@ -140,15 +140,15 @@ class ScoreReportWriterTest {
 		savedMetric(driver, "2026-11-25T00:00:00Z", tally(30_000, 0, 1));
 		savedMetric(driver, "2026-11-25T01:00:00Z", tally(30_000, 2, 0));
 		savedMetric(driver, "2026-11-25T02:00:00Z", tally(10_000, 0, 0));
-		writer().write(new Chunk<>(List.of(driver.getId())));
-		double firstScore = reportRepository.findTopByDriverOrderByIdDesc(driver).orElseThrow().getScore();
+		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
+		double firstScore = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow().getScore();
 
 		// 남아 있던 10km + 새 45km = 55km로 두 번째 구간이 닫힌다
 		savedMetric(driver, "2026-11-26T00:00:00Z", tally(45_000, 0, 0));
-		writer().write(new Chunk<>(List.of(driver.getId())));
+		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
 
-		DriverScoreReport second = reportRepository.findTopByDriverOrderByIdDesc(driver).orElseThrow();
-		assertThat(segmentRepository.findTop100ByDriverOrderBySequenceNoDesc(driver))
+		VehicleScoreReport second = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
+		assertThat(segmentRepository.findTop100ByVehicleIdOrderBySequenceNoDesc(driver.getVehicleId()))
 				.extracting(ScoreSegment::getSequenceNo).containsExactly(2, 1);
 		assertThat(second.getWindowSegmentCount()).isEqualTo(2);
 		assertThat(second.getPenalty()).isCloseTo(380 / 115.0, within(1e-9));
@@ -157,10 +157,10 @@ class ScoreReportWriterTest {
 	}
 
 	@Test
-	void Reader는_리포트에_담지_않은_지표가_있는_운전자만_id_순서로_넘긴다() {
+	void Reader는_리포트에_담지_않은_지표가_있는_차량만_VIN_순서로_넘긴다() {
 		Driver done = savedDriver();
 		savedMetric(done, "2026-11-25T00:00:00Z", tally(10_000, 0, 0));
-		writer().write(new Chunk<>(List.of(done.getId())));
+		writer().write(new Chunk<>(List.of(done.getVehicleId())));
 		Driver pendingA = driverRepository.save(Driver.builder().vehicleId("VIN-A").build());
 		Driver pendingB = driverRepository.save(Driver.builder().vehicleId("VIN-B").build());
 		savedMetric(pendingB, "2026-11-25T00:00:00Z", tally(10_000, 0, 0));
@@ -168,18 +168,23 @@ class ScoreReportWriterTest {
 		savedMetric(pendingA, "2026-11-25T01:00:00Z", tally(10_000, 0, 0));
 		metricRepository.flush();
 
-		ScoreDriverReader reader = new ScoreDriverReader(metricRepository, 1);
-		List<Long> ids = new ArrayList<>();
-		for (Long id = reader.read(); id != null; id = reader.read()) {
+		ScoreVehicleReader reader = new ScoreVehicleReader(metricRepository, withChunkSize(1));
+		List<String> ids = new ArrayList<>();
+		for (String id = reader.read(); id != null; id = reader.read()) {
 			ids.add(id);
 		}
 
-		assertThat(ids).containsExactly(pendingA.getId(), pendingB.getId());
+		assertThat(ids).containsExactly("VIN-A", "VIN-B");
 	}
 
 	private ScoreReportWriter writer() {
-		return new ScoreReportWriter(driverRepository, metricRepository, segmentRepository, reportRepository,
+		return new ScoreReportWriter(metricRepository, segmentRepository, reportRepository,
 				outboxRepository, jsonMapper, scoreProperties);
+	}
+
+	private ScoreProperties withChunkSize(int chunkSize) {
+		return new ScoreProperties(scoreProperties.basis(), chunkSize, scoreProperties.maneuverGap(),
+				scoreProperties.settleDelay(), scoreProperties.weights(), scoreProperties.nightRates(), scoreProperties.bases());
 	}
 
 	private Driver savedDriver() {
@@ -190,7 +195,7 @@ class ScoreReportWriterTest {
 		Trip trip = tripRepository.save(Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(++tid).build());
 		return metricRepository.save(TripScoreMetric.builder()
 				.trip(trip)
-				.driver(driver)
+				.vehicleId(driver.getVehicleId())
 				.endedAt(Instant.parse(endedAt))
 				.tally(tally)
 				.build());

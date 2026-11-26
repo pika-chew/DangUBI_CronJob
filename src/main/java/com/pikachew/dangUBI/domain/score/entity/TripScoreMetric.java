@@ -3,7 +3,6 @@ package com.pikachew.dangUBI.domain.score.entity;
 import java.time.Instant;
 
 import com.pikachew.dangUBI.domain.common.entity.BaseTimeEntity;
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
 import com.pikachew.dangUBI.domain.trip.entity.Trip;
 
 import jakarta.persistence.Column;
@@ -39,9 +38,9 @@ public class TripScoreMetric extends BaseTimeEntity {
 	@JoinColumn(name = "trip_id", nullable = false, unique = true)
 	private Trip trip;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "driver_id", nullable = false)
-	private Driver driver;
+	/** 차량 식별자 (VIN). 점수는 차량 단위로 쌓는다 */
+	@Column(nullable = false, length = 64)
+	private String vehicleId;
 
 	/** 구간에 쌓는 순서의 기준. trip의 종료 시각(edt)이다 */
 	@Column(nullable = false)
@@ -62,12 +61,12 @@ public class TripScoreMetric extends BaseTimeEntity {
 	/** 이 지표를 "오늘" 카운트로 담은 리포트. 아직 리포트에 담기지 않았으면 null이다 */
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "report_id")
-	private DriverScoreReport report;
+	private VehicleScoreReport report;
 
 	@Builder
-	private TripScoreMetric(Trip trip, Driver driver, Instant endedAt, ScoreTally tally, int unevaluatedCount) {
+	private TripScoreMetric(Trip trip, String vehicleId, Instant endedAt, ScoreTally tally, int unevaluatedCount) {
 		this.trip = trip;
-		this.driver = driver;
+		this.vehicleId = vehicleId;
 		this.endedAt = endedAt;
 		this.tally = tally;
 		this.unevaluatedCount = unevaluatedCount;
@@ -77,7 +76,7 @@ public class TripScoreMetric extends BaseTimeEntity {
 		this.segment = segment;
 	}
 
-	public void assignReport(DriverScoreReport report) {
+	public void assignReport(VehicleScoreReport report) {
 		this.report = report;
 	}
 

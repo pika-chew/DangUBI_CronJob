@@ -18,21 +18,21 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import com.pikachew.dangUBI.batch.score.processor.TripScoreMetricProcessor;
-import com.pikachew.dangUBI.batch.score.reader.ScoreDriverReader;
 import com.pikachew.dangUBI.batch.score.reader.ScoreTripReader;
+import com.pikachew.dangUBI.batch.score.reader.ScoreVehicleReader;
 import com.pikachew.dangUBI.batch.score.writer.ScoreReportWriter;
 import com.pikachew.dangUBI.batch.score.writer.TripScoreMetricWriter;
 import com.pikachew.dangUBI.domain.score.entity.TripScoreMetric;
 
 /**
- * scoreJob: 종료된 trip의 점수 지표를 만들고, 운전자별 구간 감점과 하루 리포트를 남긴다 (docs/score-spec.md).
+ * scoreJob: 종료된 trip의 점수 지표를 만들고, 차량별 구간 감점과 하루 리포트를 남긴다 (docs/score-spec.md).
  *
  * 실행: --spring.batch.job.name=scoreJob                            (운영 기준: 구간 125km, 반영 범위 1,500km)
  *       --spring.batch.job.name=scoreJob --ubi.batch.score.basis=test  (구간 50km, 반영 범위 600km. 테스트 DB에서만)
  * Job 파라미터는 받지 않는다. RunIdIncrementer가 run.id를 붙여 매일 새 실행을 만들고, 넘긴 파라미터는 Spring Batch가 버린다.
  *
  * 1. scoreMetricStep (chunk = trip): 아직 지표가 없는 COMPLETED trip마다 지표를 만든다.
- * 2. scoreReportStep (chunk = 운전자): 지표가 새로 생긴 운전자마다 구간을 닫고 하루 리포트·outbox 이벤트를 남긴다.
+ * 2. scoreReportStep (chunk = 차량): 지표가 새로 생긴 차량(VIN)마다 구간을 닫고 하루 리포트·outbox 이벤트를 남긴다.
  * 처리한 것은 지표·구간·리포트가 채워져 다시 잡히지 않으므로, 실패 뒤 다시 실행하면 남은 것만 처리한다.
  */
 @Configuration
@@ -63,12 +63,12 @@ public class ScoreJobConfig {
 
 	@Bean(SCORE_REPORT_STEP_NAME)
 	public Step scoreReportStep(JobRepository jobRepository, PlatformTransactionManager transactionManager,
-			ScoreDriverReader scoreDriverReader, ScoreReportWriter scoreReportWriter,
+			ScoreVehicleReader scoreVehicleReader, ScoreReportWriter scoreReportWriter,
 			@Value(SCORE_CHUNK_SIZE_PROPERTY) int chunkSize) {
 		return new StepBuilder(SCORE_REPORT_STEP_NAME, jobRepository)
-				.<Long, Long>chunk(chunkSize)
+				.<String, String>chunk(chunkSize)
 				.transactionManager(transactionManager)
-				.reader(scoreDriverReader)
+				.reader(scoreVehicleReader)
 				.writer(scoreReportWriter)
 				.build();
 	}

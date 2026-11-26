@@ -42,7 +42,7 @@ public class TripScoreMetricProcessor implements ItemProcessor<Long, TripScoreMe
 		}
 		TripScoreMetric.TripScoreMetricBuilder metric = TripScoreMetric.builder()
 				.trip(trip)
-				.driver(trip.getDriver())
+				.vehicleId(trip.getVehicleId())
 				.endedAt(endedAt(trip));
 		if (trip.getDistance() == null) {
 			return metric.tally(ScoreTally.builder().build()).build();

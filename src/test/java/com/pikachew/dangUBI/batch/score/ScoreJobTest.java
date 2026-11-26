@@ -30,8 +30,8 @@ import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxAggregateType;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
 import com.pikachew.dangUBI.domain.outbox.repository.OutboxRepository;
-import com.pikachew.dangUBI.domain.score.entity.DriverScoreReport;
-import com.pikachew.dangUBI.domain.score.repository.DriverScoreReportRepository;
+import com.pikachew.dangUBI.domain.score.entity.VehicleScoreReport;
+import com.pikachew.dangUBI.domain.score.repository.VehicleScoreReportRepository;
 import com.pikachew.dangUBI.domain.score.repository.ScoreSegmentRepository;
 import com.pikachew.dangUBI.domain.score.repository.TripScoreMetricRepository;
 import com.pikachew.dangUBI.domain.trip.entity.Trip;
@@ -73,7 +73,7 @@ class ScoreJobTest {
 	private ScoreSegmentRepository segmentRepository;
 
 	@Autowired
-	private DriverScoreReportRepository reportRepository;
+	private VehicleScoreReportRepository reportRepository;
 
 	@Autowired
 	private OutboxRepository outboxRepository;
@@ -117,13 +117,13 @@ class ScoreJobTest {
 		assertThat(metricRepository.count()).isEqualTo(2);
 		assertThat(segmentRepository.count()).isEqualTo(1);
 
-		DriverScoreReport report = reportRepository.findTopByDriverOrderByIdDesc(driver).orElseThrow();
+		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
 		// (급가속 1회 × 90 + 급감속 1회 × 200) / 60km
 		assertThat(report.getPenalty()).isCloseTo(290 / 60.0, within(1e-9));
 		assertThat(report.getToday().getDistanceM()).isEqualTo(60_000);
 		assertThat(outboxRepository.findAllByAggregateTypeAndAggregateIdOrderById(
-				OutboxAggregateType.DRIVER_SCORE_REPORT, report.getId()))
-				.extracting(Outbox::getEventType).containsExactly(OutboxEventType.DRIVER_SCORE_REPORTED);
+				OutboxAggregateType.VEHICLE_SCORE_REPORT, report.getId()))
+				.extracting(Outbox::getEventType).containsExactly(OutboxEventType.VEHICLE_SCORE_REPORTED);
 	}
 
 	@Test
@@ -158,7 +158,7 @@ class ScoreJobTest {
 
 		assertThat(execution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 		assertThat(segmentRepository.count()).isZero();
-		DriverScoreReport report = reportRepository.findTopByDriverOrderByIdDesc(driver).orElseThrow();
+		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
 		assertThat(report.getScore()).isNull();
 		assertThat(report.getToday().getBrakeCount()).isEqualTo(1);
 	}

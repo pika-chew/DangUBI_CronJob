@@ -71,7 +71,7 @@ class TripScoreMetricRepositoryTest {
 	private static TripScoreMetric metric(Trip trip, ScoreTally tally) {
 		return TripScoreMetric.builder()
 				.trip(trip)
-				.driver(trip.getDriver())
+				.vehicleId(trip.getVehicleId())
 				.endedAt(Instant.parse("2026-11-25T00:20:00Z"))
 				.tally(tally)
 				.build();

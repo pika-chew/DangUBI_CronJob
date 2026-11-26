@@ -61,8 +61,8 @@ S3·Swift·SQS 없이 reconcileJob과 ingestJob을 로컬에서 돌린다. local
    ./gradlew bootRun --args='--spring.profiles.active=local --spring.batch.job.name=scoreJob --ubi.batch.score.basis=test'
    ```
 
-   기대 로그: `score metric chunk: trip 지표 1건 저장`, `score report chunk: 운전자 1명, 닫은 구간 0개, 리포트 1건`
-   기대 데이터: `trip_score_metric` 1행(급가속 1회, 급회전 2회), `driver_score_report` 1행(`score` NULL), `outbox`에 `DRIVER_SCORE_REPORTED` 1행
+   기대 로그: `score metric chunk: trip 지표 1건 저장`, `score report chunk: 차량 1대, 닫은 구간 0개, 리포트 1건`
+   기대 데이터: `trip_score_metric` 1행(급가속 1회, 급회전 2회), `vehicle_score_report` 1행(`score` NULL), `outbox`에 `VEHICLE_SCORE_REPORTED` 1행
 
    scoreJob은 파라미터 없이 매번 새 실행을 만든다. 다시 실행해도 새로 종료된 trip이 없으면 아무것도 만들지 않는다.
 

@@ -21,7 +21,7 @@ import com.pikachew.dangUBI.domain.score.model.ScoreWeights;
  * 테스트 실행: --ubi.batch.score.basis=test
  *
  * @param basis        쓸 기준 이름. 없으면 운영 기준(standard). bases에 없는 이름이면 앱이 뜨지 않는다
- * @param chunkSize    chunk 하나에 담는 trip 수(지표 Step)와 운전자 수(리포트 Step)
+ * @param chunkSize    chunk 하나에 담는 trip 수(지표 Step)와 차량 수(리포트 Step)
  * @param maneuverGap  같은 기동으로 묶는 microtrip 간격
  * @param settleDelay  trip이 마지막으로 적재된 뒤 이만큼 지나야 점수 지표를 만든다. 늦게 적재된 microtrip을 놓치지 않으려는 대기 시간
  * @param weights      이벤트 묶음별 가중치

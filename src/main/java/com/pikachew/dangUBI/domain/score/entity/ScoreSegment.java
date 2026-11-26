@@ -1,17 +1,13 @@
 package com.pikachew.dangUBI.domain.score.entity;
 
 import com.pikachew.dangUBI.domain.common.entity.BaseTimeEntity;
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -20,13 +16,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 운전자별로 trip 지표를 쌓아 구간 거리를 넘었을 때 닫은 구간 하나 (docs/score-spec.md 5장).
+ * 차량별로 trip 지표를 쌓아 구간 거리를 넘었을 때 닫은 구간 하나 (docs/score-spec.md 5장).
  * 닫힌 구간만 저장한다. 닫힌 뒤에는 바뀌지 않는다.
  */
 @Getter
 @Entity
-@Table(uniqueConstraints = @UniqueConstraint(name = "uk_score_segment_driver_id_sequence_no",
-		columnNames = {"driver_id", "sequence_no"}))
+@Table(uniqueConstraints = @UniqueConstraint(name = "uk_score_segment_vehicle_id_sequence_no",
+		columnNames = {"vehicle_id", "sequence_no"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ScoreSegment extends BaseTimeEntity {
 
@@ -34,11 +30,11 @@ public class ScoreSegment extends BaseTimeEntity {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "driver_id", nullable = false)
-	private Driver driver;
+	/** 차량 식별자 (VIN) */
+	@Column(nullable = false, length = 64)
+	private String vehicleId;
 
-	/** 운전자별 1부터 매기는 구간 순번 */
+	/** 차량별 1부터 매기는 구간 순번 */
 	@Column(nullable = false)
 	private int sequenceNo;
 
@@ -50,8 +46,8 @@ public class ScoreSegment extends BaseTimeEntity {
 	private double penalty;
 
 	@Builder
-	private ScoreSegment(Driver driver, int sequenceNo, ScoreTally tally, double penalty) {
-		this.driver = driver;
+	private ScoreSegment(String vehicleId, int sequenceNo, ScoreTally tally, double penalty) {
+		this.vehicleId = vehicleId;
 		this.sequenceNo = sequenceNo;
 		this.tally = tally;
 		this.penalty = penalty;

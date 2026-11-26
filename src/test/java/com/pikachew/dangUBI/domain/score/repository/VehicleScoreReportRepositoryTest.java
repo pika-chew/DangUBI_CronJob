@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pikachew.dangUBI.domain.driver.entity.Driver;
 import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
-import com.pikachew.dangUBI.domain.score.entity.DriverScoreReport;
+import com.pikachew.dangUBI.domain.score.entity.VehicleScoreReport;
 import com.pikachew.dangUBI.domain.score.entity.ScoreEventSummary;
 import com.pikachew.dangUBI.domain.score.entity.ScoreTally;
 import com.pikachew.dangUBI.domain.score.entity.TripScoreMetric;
@@ -26,10 +26,10 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class DriverScoreReportRepositoryTest {
+class VehicleScoreReportRepositoryTest {
 
 	@Autowired
-	private DriverScoreReportRepository reportRepository;
+	private VehicleScoreReportRepository reportRepository;
 
 	@Autowired
 	private TripScoreMetricRepository metricRepository;
@@ -52,7 +52,7 @@ class DriverScoreReportRepositoryTest {
 		Long id = reportRepository.saveAndFlush(report(driver, 89.72, today, window)).getId();
 		entityManager.clear();
 
-		DriverScoreReport found = reportRepository.findById(id).orElseThrow();
+		VehicleScoreReport found = reportRepository.findById(id).orElseThrow();
 		assertThat(found.getToday()).isEqualTo(today);
 		assertThat(found.getWindow()).isEqualTo(window);
 		assertThat(found.getReportDate()).isEqualTo(LocalDate.parse("2026-11-25"));
@@ -75,9 +75,9 @@ class DriverScoreReportRepositoryTest {
 		Driver driver = savedDriver();
 		ScoreEventSummary empty = ScoreEventSummary.builder().build();
 		reportRepository.save(report(driver, 90.0, empty, empty));
-		DriverScoreReport latest = reportRepository.saveAndFlush(report(driver, 91.0, empty, empty));
+		VehicleScoreReport latest = reportRepository.saveAndFlush(report(driver, 91.0, empty, empty));
 
-		assertThat(reportRepository.findTopByDriverOrderByIdDesc(driver)).contains(latest);
+		assertThat(reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId())).contains(latest);
 	}
 
 	@Test
@@ -89,7 +89,7 @@ class DriverScoreReportRepositoryTest {
 		reported.assignReport(reportRepository.save(report(driver, null, empty, empty)));
 		metricRepository.flush();
 
-		assertThat(metricRepository.findByDriverAndReportIsNullOrderByEndedAtAscIdAsc(driver)).containsExactly(fresh);
+		assertThat(metricRepository.findByVehicleIdAndReportIsNullOrderByEndedAtAscIdAsc(driver.getVehicleId())).containsExactly(fresh);
 	}
 
 	private Driver savedDriver() {
@@ -100,15 +100,14 @@ class DriverScoreReportRepositoryTest {
 		Trip trip = tripRepository.save(Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(tid).build());
 		return TripScoreMetric.builder()
 				.trip(trip)
-				.driver(driver)
+				.vehicleId(driver.getVehicleId())
 				.endedAt(Instant.parse("2026-11-25T00:20:00Z"))
 				.tally(ScoreTally.builder().distanceM(12_000).build())
 				.build();
 	}
 
-	private static DriverScoreReport report(Driver driver, Double score, ScoreEventSummary today, ScoreEventSummary window) {
-		return DriverScoreReport.builder()
-				.driver(driver)
+	private static VehicleScoreReport report(Driver driver, Double score, ScoreEventSummary today, ScoreEventSummary window) {
+		return VehicleScoreReport.builder()
 				.vehicleId(driver.getVehicleId())
 				.reportDate(LocalDate.parse("2026-11-25"))
 				.score(score)

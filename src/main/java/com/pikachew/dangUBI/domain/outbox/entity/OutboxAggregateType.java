@@ -5,7 +5,7 @@ public enum OutboxAggregateType {
 
 	TRIP,
 
-	/** driver_score_report. 리포트마다 이벤트가 하나라 운전자가 아니라 리포트를 대상으로 한다 */
-	DRIVER_SCORE_REPORT
+	/** vehicle_score_report. 리포트마다 이벤트가 하나라 차량이 아니라 리포트를 대상으로 한다 */
+	VEHICLE_SCORE_REPORT
 
 }

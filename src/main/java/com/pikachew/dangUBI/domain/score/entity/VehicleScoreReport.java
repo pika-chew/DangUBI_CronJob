@@ -3,40 +3,33 @@ package com.pikachew.dangUBI.domain.score.entity;
 import java.time.LocalDate;
 
 import com.pikachew.dangUBI.domain.common.entity.BaseTimeEntity;
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
 
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 운전자 하루 리포트 (docs/score-spec.md 7장). scoreJob이 새로 지표를 만든 운전자마다 실행당 하나 남긴다.
- * 받는 쪽은 outbox 이벤트(DRIVER_SCORE_REPORTED)를 받고 이 테이블에서 필요한 항목만 읽는다.
+ * 차량 하루 리포트 (docs/score-spec.md 7장). scoreJob이 새로 지표를 만든 차량마다 실행당 하나 남긴다.
+ * 점수는 차량(VIN) 단위다. 한 사람이 여러 차량을 타는 경우의 합산은 받는 쪽(query server)이 한다.
+ * 받는 쪽은 outbox 이벤트(VEHICLE_SCORE_REPORTED)를 받고 이 테이블에서 필요한 항목만 읽는다.
  */
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class DriverScoreReport extends BaseTimeEntity {
+public class VehicleScoreReport extends BaseTimeEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "driver_id", nullable = false)
-	private Driver driver;
 
 	/** 차량 식별자 (VIN) */
 	@Column(nullable = false, length = 64)
@@ -86,9 +79,8 @@ public class DriverScoreReport extends BaseTimeEntity {
 	private ScoreEventSummary window;
 
 	@Builder
-	private DriverScoreReport(Driver driver, String vehicleId, LocalDate reportDate, Double score, Double penalty,
+	private VehicleScoreReport(String vehicleId, LocalDate reportDate, Double score, Double penalty,
 			Double scoreChange, String recentScores, int windowSegmentCount, ScoreEventSummary today, ScoreEventSummary window) {
-		this.driver = driver;
 		this.vehicleId = vehicleId;
 		this.reportDate = reportDate;
 		this.score = score;

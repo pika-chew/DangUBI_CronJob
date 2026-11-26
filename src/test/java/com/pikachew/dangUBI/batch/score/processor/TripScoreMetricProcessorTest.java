@@ -52,7 +52,7 @@ class TripScoreMetricProcessorTest {
 
 		ScoreTally tally = metric.getTally();
 		assertThat(metric.getTrip()).isSameAs(trip);
-		assertThat(metric.getDriver()).isSameAs(driver);
+		assertThat(metric.getVehicleId()).isEqualTo("0DS614RB2TT925001");
 		assertThat(metric.getEndedAt()).isEqualTo(Instant.parse("2026-11-24T16:20:00Z"));
 		assertThat(tally.getDistanceM()).isEqualTo(12_000);
 		assertThat(tally.getBrakeCount()).isEqualTo(1);
