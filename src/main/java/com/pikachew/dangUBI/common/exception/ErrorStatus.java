@@ -14,7 +14,7 @@ public enum ErrorStatus implements BaseErrorCode {
 	RECONCILE_REQUEUE_INCOMPLETE(6100, "누락 객체를 모두 재큐잉하지 못했습니다."),
 
 	// 점수 계산 오류 (6200번대)
-	SCORE_UNKNOWN_BASIS(6200, "알 수 없는 scoreBasis입니다. application.yaml의 ubi.batch.score.bases에 있는 이름을 쓰세요."),
+	SCORE_UNKNOWN_BASIS(6200, "알 수 없는 ubi.batch.score.basis입니다. application.yaml의 ubi.batch.score.bases에 있는 이름을 쓰세요."),
 	;
 
 	private final Integer code;

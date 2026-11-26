@@ -14,12 +14,7 @@ public final class ScoreStaticValues {
 	public static final String SCORE_METRIC_STEP_NAME = "scoreMetricStep";
 	public static final String SCORE_REPORT_STEP_NAME = "scoreReportStep";
 
-	// Job 파라미터
-	/** 기준 거리 이름 (선택). 없으면 운영 기준. 예: scoreBasis=test */
-	public static final String SCORE_BASIS_PARAM = "scoreBasis";
-	/** RunIdIncrementer가 붙이는 키. 파라미터 없이 매일 새 실행을 만든다 */
-	public static final String SCORE_RUN_ID_PARAM = "run.id";
-	public static final String SCORE_BASIS_EXPRESSION = "#{jobParameters['" + SCORE_BASIS_PARAM + "']}";
+	/** chunk 크기 설정 (application.yaml) */
 	public static final String SCORE_CHUNK_SIZE_PROPERTY = "${ubi.batch.score.chunk-size}";
 
 	// 이벤트 묶음 비트 (3장). 묶음 안의 비트가 하나라도 켜지면 그 묶음의 이벤트다
@@ -46,7 +41,7 @@ public final class ScoreStaticValues {
 
 	// 설정 (application.yaml)
 	public static final String SCORE_PROPERTY_PREFIX = "ubi.batch.score";
-	/** scoreBasis 파라미터가 없을 때 쓰는 운영 기준 이름 */
+	/** ubi.batch.score.basis가 없을 때 쓰는 운영 기준 이름 */
 	public static final String SCORE_DEFAULT_BASIS = "standard";
 
 }

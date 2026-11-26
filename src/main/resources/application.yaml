@@ -30,6 +30,8 @@ ubi:
       chunk-size: 10
     # 안전운전 점수 (docs/score-spec.md 9장)
     score:
+      # 쓸 기준(bases의 이름). 테스트 실행은 --ubi.batch.score.basis=test
+      basis: standard
       # chunk 하나에 담는 trip 수(지표 Step)와 운전자 수(리포트 Step)
       chunk-size: 100
       # 같은 묶음이 이 간격 안에 이어지면 한 번의 기동으로 센다. microtrip 전송 주기 2초 × 2
@@ -47,7 +49,7 @@ ubi:
         "[1]": 0.4000
         "[2]": 0.3840
         "[3]": 0.1640
-      # Job 파라미터 scoreBasis로 고른다. 없으면 standard
+      # 기준 이름 → 구간 거리·반영 범위. test는 테스트 DB에서만 쓴다(한 DB에 섞으면 구간 길이가 섞인다)
       bases:
         standard:
           segment-distance-km: 125

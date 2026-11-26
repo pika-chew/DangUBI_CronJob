@@ -14,16 +14,22 @@ import com.pikachew.dangUBI.common.exception.GeneralException;
 import com.pikachew.dangUBI.domain.score.model.ScoreWeights;
 
 /**
- * scoreJob 설정 (docs/score-spec.md 9장).
+ * scoreJob 설정 (docs/score-spec.md 8·9장).
  *
+ * 기준 거리는 Job 파라미터가 아니라 설정으로 고른다. scoreJob은 매일 새 실행을 만들려고 RunIdIncrementer를 쓰는데,
+ * Spring Batch 6은 incrementer가 있는 Job에 넘긴 파라미터를 버리기 때문이다.
+ * 테스트 실행: --ubi.batch.score.basis=test
+ *
+ * @param basis        쓸 기준 이름. 없으면 운영 기준(standard). bases에 없는 이름이면 앱이 뜨지 않는다
  * @param chunkSize    chunk 하나에 담는 trip 수(지표 Step)와 운전자 수(리포트 Step)
  * @param maneuverGap  같은 기동으로 묶는 microtrip 간격
  * @param weights      이벤트 묶음별 가중치
  * @param nightRates   KST 시간대(0–23) → 야간 추가 감점률. 없는 시간대는 0
- * @param bases        기준 이름 → 구간 거리·반영 범위. Job 파라미터 scoreBasis로 고른다
+ * @param bases        기준 이름 → 구간 거리·반영 범위
  */
 @ConfigurationProperties(SCORE_PROPERTY_PREFIX)
 public record ScoreProperties(
+		String basis,
 		int chunkSize,
 		Duration maneuverGap,
 		ScoreWeights weights,
@@ -31,13 +37,16 @@ public record ScoreProperties(
 		Map<String, Basis> bases
 ) {
 
-	/** 이름이 없으면 운영 기준(standard)을 쓴다 */
-	public Basis basis(String name) {
-		Basis basis = bases.get(name == null ? SCORE_DEFAULT_BASIS : name);
-		if (basis == null) {
+	public ScoreProperties {
+		basis = basis == null ? SCORE_DEFAULT_BASIS : basis;
+		if (bases == null || !bases.containsKey(basis)) {
 			throw new GeneralException(ErrorStatus.SCORE_UNKNOWN_BASIS);
 		}
-		return basis;
+	}
+
+	/** 지금 쓰는 기준의 구간 거리·반영 범위 */
+	public Basis currentBasis() {
+		return bases.get(basis);
 	}
 
 	/**

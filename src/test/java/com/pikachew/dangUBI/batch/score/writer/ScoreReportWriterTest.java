@@ -39,7 +39,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * DB 통합 테스트: 운전자마다 구간을 닫고 하루 리포트·outbox 이벤트를 남긴다.
- * test 기준(구간 50km, 반영 범위 600km)과 운영 가중치(과속 120, 급가속 90, 급감속 200, 급회전 100)를 쓴다.
+ * 테스트 프로필의 test 기준(구간 50km, 반영 범위 600km)과 운영 가중치(과속 120, 급가속 90, 급감속 200, 급회전 100)를 쓴다.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -179,7 +179,7 @@ class ScoreReportWriterTest {
 
 	private ScoreReportWriter writer() {
 		return new ScoreReportWriter(driverRepository, metricRepository, segmentRepository, reportRepository,
-				outboxRepository, jsonMapper, scoreProperties, "test");
+				outboxRepository, jsonMapper, scoreProperties);
 	}
 
 	private Driver savedDriver() {

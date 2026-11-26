@@ -30,22 +30,36 @@ class ScorePropertiesTest {
 	}
 
 	@Test
-	void 기준_이름이_없으면_운영_기준_125km_1500km다() throws IOException {
-		assertThat(load().basis(null)).isEqualTo(new ScoreProperties.Basis(125, 1500));
+	void 기본은_운영_기준_125km_1500km다() throws IOException {
+		ScoreProperties properties = load();
+
+		assertThat(properties.basis()).isEqualTo("standard");
+		assertThat(properties.currentBasis()).isEqualTo(new ScoreProperties.Basis(125, 1500));
+		assertThat(properties.currentBasis().segmentDistanceM()).isEqualTo(125_000);
 	}
 
 	@Test
 	void test_기준은_50km_600km다() throws IOException {
-		assertThat(load().basis("test")).isEqualTo(new ScoreProperties.Basis(50, 600));
+		assertThat(withBasis(load(), "test").currentBasis()).isEqualTo(new ScoreProperties.Basis(50, 600));
 	}
 
 	@Test
-	void 없는_기준_이름이면_실패한다() throws IOException {
+	void 기준_이름이_없으면_운영_기준을_쓴다() throws IOException {
+		assertThat(withBasis(load(), null).basis()).isEqualTo("standard");
+	}
+
+	@Test
+	void 없는_기준_이름이면_설정을_만들_수_없다() throws IOException {
 		ScoreProperties properties = load();
 
-		assertThatThrownBy(() -> properties.basis("fast"))
+		assertThatThrownBy(() -> withBasis(properties, "fast"))
 				.isInstanceOfSatisfying(GeneralException.class,
 						e -> assertThat(e.getCode()).isEqualTo(ErrorStatus.SCORE_UNKNOWN_BASIS));
+	}
+
+	private static ScoreProperties withBasis(ScoreProperties properties, String basis) {
+		return new ScoreProperties(basis, properties.chunkSize(), properties.maneuverGap(), properties.weights(),
+				properties.nightRates(), properties.bases());
 	}
 
 	private static ScoreProperties load() throws IOException {

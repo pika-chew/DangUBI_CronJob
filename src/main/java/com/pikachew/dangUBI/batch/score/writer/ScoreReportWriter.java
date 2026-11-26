@@ -1,16 +1,13 @@
 package com.pikachew.dangUBI.batch.score.writer;
 
-import static com.pikachew.dangUBI.common.consts.ScoreStaticValues.SCORE_BASIS_EXPRESSION;
 import static com.pikachew.dangUBI.common.consts.ScoreStaticValues.SCORE_ZONE;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.OptionalDouble;
 
-import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.batch.infrastructure.item.ItemWriter;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.pikachew.dangUBI.batch.score.config.ScoreProperties;
@@ -32,6 +29,7 @@ import com.pikachew.dangUBI.domain.score.repository.DriverScoreReportRepository;
 import com.pikachew.dangUBI.domain.score.repository.ScoreSegmentRepository;
 import com.pikachew.dangUBI.domain.score.repository.TripScoreMetricRepository;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -48,7 +46,7 @@ import tools.jackson.databind.json.JsonMapper;
  */
 @Slf4j
 @Component
-@StepScope
+@RequiredArgsConstructor
 public class ScoreReportWriter implements ItemWriter<Long> {
 
 	private final DriverRepository driverRepository;
@@ -58,25 +56,11 @@ public class ScoreReportWriter implements ItemWriter<Long> {
 	private final OutboxRepository outboxRepository;
 	private final JsonMapper jsonMapper;
 	private final ScoreProperties scoreProperties;
-	private final ScoreProperties.Basis basis;
-
-	public ScoreReportWriter(DriverRepository driverRepository, TripScoreMetricRepository metricRepository,
-			ScoreSegmentRepository segmentRepository, DriverScoreReportRepository reportRepository,
-			OutboxRepository outboxRepository, JsonMapper jsonMapper, ScoreProperties scoreProperties,
-			@Value(SCORE_BASIS_EXPRESSION) String basisName) {
-		this.driverRepository = driverRepository;
-		this.metricRepository = metricRepository;
-		this.segmentRepository = segmentRepository;
-		this.reportRepository = reportRepository;
-		this.outboxRepository = outboxRepository;
-		this.jsonMapper = jsonMapper;
-		this.scoreProperties = scoreProperties;
-		this.basis = scoreProperties.basis(basisName);
-	}
 
 	@Override
 	public void write(Chunk<? extends Long> chunk) {
 		LocalDate reportDate = LocalDate.now(SCORE_ZONE);
+		ScoreProperties.Basis basis = scoreProperties.currentBasis();
 		int closedSegments = 0;
 		int reports = 0;
 		for (Long driverId : chunk) {
@@ -84,14 +68,14 @@ public class ScoreReportWriter implements ItemWriter<Long> {
 			if (driver == null) {
 				continue;
 			}
-			closedSegments += closeSegments(driver);
-			saveReport(driver, reportDate);
+			closedSegments += closeSegments(driver, basis);
+			saveReport(driver, reportDate, basis);
 			reports++;
 		}
 		log.info("score report chunk: 운전자 {}명, 닫은 구간 {}개, 리포트 {}건", chunk.size(), closedSegments, reports);
 	}
 
-	private int closeSegments(Driver driver) {
+	private int closeSegments(Driver driver, ScoreProperties.Basis basis) {
 		List<TripScoreMetric> unsegmented = metricRepository.findByDriverAndSegmentIsNullOrderByEndedAtAscIdAsc(driver);
 		List<List<TripScoreMetric>> groups = ScoreSegmentPolicy.closeSegments(unsegmented, basis.segmentDistanceM());
 		int sequenceNo = segmentRepository.findTopByDriverOrderBySequenceNoDesc(driver)
@@ -110,7 +94,7 @@ public class ScoreReportWriter implements ItemWriter<Long> {
 		return groups.size();
 	}
 
-	private void saveReport(Driver driver, LocalDate reportDate) {
+	private void saveReport(Driver driver, LocalDate reportDate, ScoreProperties.Basis basis) {
 		List<TripScoreMetric> unreported = metricRepository.findByDriverAndReportIsNullOrderByEndedAtAscIdAsc(driver);
 		List<ScoreSegment> window = ScoreSegmentPolicy.window(
 				segmentRepository.findTop100ByDriverOrderBySequenceNoDesc(driver), basis.windowDistanceM());
