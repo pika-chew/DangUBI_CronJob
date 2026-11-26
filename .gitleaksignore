@@ -3,3 +3,4 @@
 
 # 테스트에 고정한 실제 Lambda 출력의 idempotencyKey(SHA-256 해시). 이름에 Key가 있어 generic-api-key로 오인됨
 9172947ef479c9b2faa5872fdd9c3fe8c3f064ba:src/test/java/com/pikachew/dangUBI/infra/swift/TelemetryJsonlParserTest.java:generic-api-key:31
+d81e129d9686912ccc6c4cb0a6ed916f3b883189:src/test/java/com/pikachew/dangUBI/infra/swift/TelemetryJsonlParserTest.java:generic-api-key:41
