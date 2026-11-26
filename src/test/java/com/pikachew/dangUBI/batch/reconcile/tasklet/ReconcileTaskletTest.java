@@ -1,5 +1,6 @@
 package com.pikachew.dangUBI.batch.reconcile.tasklet;
 
+import static com.pikachew.dangUBI.common.consts.ReconcileStaticValues.RECONCILE_MISSING_KEYS_CONTEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -42,6 +43,17 @@ class ReconcileTaskletTest {
 		assertThat(published).containsExactly(objects("b"));
 		assertThat(stepExecution.getFilterCount()).isEqualTo(2);
 		assertThat(stepExecution.getWriteCount()).isEqualTo(1);
+	}
+
+	@Test
+	void 재큐잉한_키를_Job_실행_기록에_남긴다() {
+		ReconcileTasklet tasklet = tasklet(objects("a", "b", "c"), objects("a"), recordingPublisher());
+		StepExecution stepExecution = MetaDataInstanceFactory.createStepExecution();
+
+		tasklet.execute(stepExecution.createStepContribution(), null);
+
+		assertThat(stepExecution.getJobExecution().getExecutionContext().get(RECONCILE_MISSING_KEYS_CONTEXT))
+				.isEqualTo(List.of("b", "c"));
 	}
 
 	@Test

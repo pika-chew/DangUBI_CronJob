@@ -16,4 +16,7 @@ public final class ReconcileStaticValues {
 	/** @StepScope 빈에 targetDate를 주입하는 표현식 */
 	public static final String RECONCILE_TARGET_DATE_EXPRESSION = "#{jobParameters['" + RECONCILE_TARGET_DATE_PARAM + "']}";
 
+	/** 재큐잉한 객체 키 목록을 Job 실행 기록(ExecutionContext)에 남기는 키. dailyJob의 복사 대기 Step이 읽는다 */
+	public static final String RECONCILE_MISSING_KEYS_CONTEXT = "reconcile.missingKeys";
+
 }
