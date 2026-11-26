@@ -94,8 +94,26 @@ scripts/run-score-demo.sh
 
 - 다른 데이터를 만들려면 `python3 scripts/make-score-sample.py --seed 11 --days 5`처럼 직접 실행한 뒤 날짜마다 ingestJob과 scoreJob을 돌린다.
 - 스크립트를 다시 돌리면 같은 레코드는 걸러지고, scoreJob은 새로 종료된 trip이 없어 리포트를 만들지 않는다. 처음부터 보려면 DB를 비운다.
-- MySQL을 3306이 아닌 포트로 띄웠다면 `SPRING_DATASOURCE_URL`과 `MYSQL_CMD`를 함께 바꾼다:
-  `SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3307/ubi MYSQL_CMD="docker exec -i ubi-mysql mysql -t -uubi -pubi ubi" scripts/run-score-demo.sh`
+### 3306을 다른 MySQL이 쓰고 있을 때
+
+compose의 MySQL이 뜨지 않으므로 3307에 컨테이너를 따로 띄우고, 접속 주소와 조회 명령을 함께 바꾼다.
+
+```bash
+# 1. 3307에 MySQL 컨테이너 띄우기 (처음 한 번)
+docker run -d --name ubi-mysql \
+  -e MYSQL_DATABASE=ubi -e MYSQL_USER=ubi -e MYSQL_PASSWORD=ubi -e MYSQL_ROOT_PASSWORD=root \
+  -e TZ=Asia/Seoul -p 3307:3306 mysql:8.4
+
+# 2. 뜰 때까지 기다리기
+until docker exec ubi-mysql mysqladmin ping -uubi -pubi --silent; do sleep 2; done
+
+# 3. 시연 실행
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3307/ubi \
+MYSQL_CMD="docker exec -i ubi-mysql mysql -t -uubi -pubi ubi" \
+scripts/run-score-demo.sh
+```
+
+처음부터 다시 하려면 `docker rm -f ubi-mysql` 후 1번부터 한다.
 
 ## 3306 포트를 이미 쓰고 있을 때
 
