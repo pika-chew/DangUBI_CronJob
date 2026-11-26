@@ -68,6 +68,12 @@ public class Trip extends BaseTimeEntity {
 	private String tripIdempotencyKey;
 	private Instant tripReceivedAt;
 
+	/**
+	 * 이 trip에 새 데이터(microtrip 또는 ty=3)를 마지막으로 적재한 시각. scoreJob은 이 시각부터 settle-delay를 기다린다.
+	 * microtrip이 수집 범위 안쪽에 들어오면 다른 컬럼이 바뀌지 않아 updated_at으로는 알 수 없어 따로 둔다.
+	 */
+	private Instant lastIngestedAt;
+
 	/** 처음 본 trip은 진행 중 상태로 만든다. ty=3이 먼저 오면 바로 {@link #complete}가 이어진다 */
 	@Builder
 	private Trip(Driver driver, String vehicleId, int tid) {
@@ -85,6 +91,10 @@ public class Trip extends BaseTimeEntity {
 		if (lastCollectedAt == null || collectedAt.isAfter(lastCollectedAt)) {
 			lastCollectedAt = collectedAt;
 		}
+	}
+
+	public void recordIngestedAt(Instant ingestedAt) {
+		this.lastIngestedAt = ingestedAt;
 	}
 
 	/** ty=3 요약값을 채우고 종료한다. 같은 메시지를 다시 받아도 같은 값으로 덮어쓸 뿐이다 */

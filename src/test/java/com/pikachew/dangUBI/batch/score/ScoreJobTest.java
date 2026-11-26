@@ -172,6 +172,7 @@ class ScoreJobTest {
 		Instant end = Instant.parse(endedAt);
 		Trip trip = Trip.builder().driver(driver).vehicleId(VIN).tid(++tid).build();
 		trip.complete(trip(VIN, tid, end.minusSeconds(1200).toString(), endedAt, distanceM));
+		trip.recordIngestedAt(Instant.now());
 		tripRepository.save(trip);
 		microtripRepository.save(TripMicrotrip.builder()
 				.trip(trip)

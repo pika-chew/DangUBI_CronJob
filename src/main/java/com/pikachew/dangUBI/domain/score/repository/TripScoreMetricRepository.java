@@ -15,12 +15,12 @@ public interface TripScoreMetricRepository extends JpaRepository<TripScoreMetric
 
 	/**
 	 * 아직 지표가 없고 settledBefore 이전에 마지막으로 적재된 trip id를 afterId 다음부터 id 순서로.
-	 * microtrip이 적재되면 trip의 수집 범위가 바뀌어 updatedAt이 갱신되므로, 최근에 적재된 trip은 기다린다.
+	 * ingestJob이 새 microtrip·ty=3을 받은 trip마다 lastIngestedAt을 남기므로, 최근에 적재된 trip은 기다린다.
 	 * 처리한 trip은 지표가 생겨 다음 조회에서 빠진다.
 	 */
 	@Query("""
 			select t.id from Trip t
-			where t.status = :status and t.id > :afterId and t.updatedAt <= :settledBefore
+			where t.status = :status and t.id > :afterId and t.lastIngestedAt <= :settledBefore
 			  and not exists (select m.id from TripScoreMetric m where m.trip = t)
 			order by t.id""")
 	List<Long> findUnscoredTripIds(@Param("status") TripStatus status, @Param("afterId") long afterId,

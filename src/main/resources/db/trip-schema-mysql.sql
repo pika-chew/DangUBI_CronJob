@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS trip (
     driving_time          INT           NULL,
     trip_idempotency_key  VARCHAR(128)  COLLATE utf8mb4_bin  NULL,
     trip_received_at      DATETIME(3)   NULL,
+    last_ingested_at      DATETIME(3)   NULL,
     created_at            DATETIME(3)   NOT NULL,
     updated_at            DATETIME(3)   NOT NULL,
     PRIMARY KEY (id),

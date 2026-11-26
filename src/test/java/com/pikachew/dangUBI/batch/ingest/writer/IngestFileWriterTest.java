@@ -46,6 +46,7 @@ class IngestFileWriterTest {
 	private static final String V1 = "vehicle-001";
 	private static final String TRIP_START = "2026-11-10T10:00:00Z";
 	private static final String TRIP_END = "2026-11-10T11:00:00Z";
+	private static final Instant LONG_AGO = Instant.parse("2000-01-01T00:00:00Z");
 
 	@Autowired
 	private IngestFileWriter writer;
@@ -263,6 +264,45 @@ class IngestFileWriterTest {
 		write(List.of(), List.of(microtrip(V1, 354, "m2", TRIP_END)));
 
 		assertThat(outboxRepository.count()).isEqualTo(1);
+	}
+
+	@Test
+	void 새_데이터를_받은_trip에는_적재_시각을_남긴다() {
+		Instant before = Instant.now().minusSeconds(1);
+
+		write(List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000)), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+
+		assertThat(findTrip(V1, 354).getLastIngestedAt()).isAfter(before);
+	}
+
+	@Test
+	void 수집_범위_안쪽의_microtrip이_늦게_와도_적재_시각을_다시_남긴다() {
+		write(List.of(), List.of(
+				microtrip(V1, 354, "m1", "2026-11-10T10:00:00Z"),
+				microtrip(V1, 354, "m3", "2026-11-10T10:30:00Z")));
+		markIngestedLongAgo(V1, 354);
+
+		write(List.of(), List.of(microtrip(V1, 354, "m2", "2026-11-10T10:15:00Z")));
+
+		Trip trip = findTrip(V1, 354);
+		assertThat(trip.getFirstCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:00:00Z"));
+		assertThat(trip.getLastCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:30:00Z"));
+		assertThat(trip.getLastIngestedAt()).isAfter(LONG_AGO);
+	}
+
+	@Test
+	void 이미_저장된_microtrip만_다시_오면_적재_시각을_바꾸지_않는다() {
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+		markIngestedLongAgo(V1, 354);
+
+		write(List.of(), List.of(microtrip(V1, 354, "m1", TRIP_START)));
+
+		assertThat(findTrip(V1, 354).getLastIngestedAt()).isEqualTo(LONG_AGO);
+	}
+
+	private void markIngestedLongAgo(String vehicleId, int tid) {
+		findTrip(vehicleId, tid).recordIngestedAt(LONG_AGO);
+		flushAndClear();
 	}
 
 	private List<Outbox> findOutboxes(Trip trip) {

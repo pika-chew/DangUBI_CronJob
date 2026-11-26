@@ -91,11 +91,22 @@ class ScoreTripReaderTest {
 		// 기준을 1ms 앞으로 당겨, 이 뒤에 고친 trip은 같은 밀리초여도 기준보다 늦다
 		ScoreTripReader startedBeforeLateIngest = reader(10, Duration.ofMillis(1));
 
-		trip.recordCollectedAt(Instant.parse("2026-11-25T00:19:58Z"));
+		// 수집 범위 안쪽의 microtrip이 늦게 적재되어 ingestJob이 적재 시각을 다시 남긴 상황
+		trip.recordIngestedAt(Instant.now());
 		tripRepository.flush();
 
 		assertThat(readAll(startedBeforeLateIngest)).isEmpty();
 		assertThat(readAll(reader(10, Duration.ZERO))).containsExactly(trip.getId());
+	}
+
+	@Test
+	void 적재_시각이_없는_trip은_읽지_않는다() {
+		Driver driver = driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
+		Trip trip = Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(1).build();
+		trip.complete(trip(driver.getVehicleId(), 1, "2026-11-25T00:00:00Z", "2026-11-25T00:20:00Z", 12_000));
+		tripRepository.saveAndFlush(trip);
+
+		assertThat(readAll(reader(10, Duration.ZERO))).isEmpty();
 	}
 
 	private ScoreTripReader reader(int pageSize, Duration settleDelay) {
@@ -107,6 +118,7 @@ class ScoreTripReaderTest {
 	private Trip completed(Driver driver, int tid) {
 		Trip trip = Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(tid).build();
 		trip.complete(trip(driver.getVehicleId(), tid, "2026-11-25T00:00:00Z", "2026-11-25T00:20:00Z", 12_000));
+		trip.recordIngestedAt(Instant.now());
 		return tripRepository.save(trip);
 	}
 
