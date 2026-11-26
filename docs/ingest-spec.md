@@ -58,7 +58,7 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 
 | 필드 | 설명 |
 | --- | --- |
-| `vehicleId` | 차량 ID. 지금은 운전자 = 차량으로 본다 |
+| `vehicleId` | 차량 ID |
 | `ts` | Lambda가 받은 시각 (epoch ms, UTC) |
 | `ty` | 3 = trip(운행 종료 후 1회), 4 = microtrip(운행 중 주기 전송) |
 | `schemaVersion` | 지금은 1만 받는다 |
@@ -102,11 +102,10 @@ trip 분리는 MySQL에서 하므로 경로로 나눌 이득이 없다.
 
 ## 7. 테이블
 
-컬럼 상세는 엔티티(`domain/driver/entity`, `domain/trip/entity`)와 `src/main/resources/db/trip-schema-mysql.sql`을 기준으로 한다. 시각은 UTC `DATETIME(3)`이다.
+컬럼 상세는 엔티티(`domain/trip/entity`)와 `src/main/resources/db/trip-schema-mysql.sql`을 기준으로 한다. 시각은 UTC `DATETIME(3)`이다.
 
 | 표 | 키 | 내용 |
 | --- | --- | --- |
-| `driver` | `vehicle_id` 유니크 | 지금은 차량 1대 = 운전자 1명 |
 | `trip` | `(vehicle_id, tid)` 유니크 | 상태, ty=3 요약값(시작·종료 시각, 주행거리, 최고·평균 속도, 주행 시간), microtrip 수집 시각 범위, 마지막 적재 시각 |
 | `trip_microtrip` | `idempotency_key` 유니크 | microtrip 한 건의 수집 시각(`clt`), 속도(`sp`), 이벤트 비트(`em`). 인덱스 `(trip_id, collected_at)` |
 | `outbox` | `(aggregate_type, aggregate_id, event_type)` 유니크 | 적재와 같은 트랜잭션에서 남기는 발행 대기 이벤트. 인덱스 `(status, id)` |
@@ -120,7 +119,7 @@ ingestJob Writer가 trip을 저장하는 chunk 트랜잭션 안에서 함께 기
 | `TRIP_STARTED` | trip을 처음 만들 때. ty=3이 먼저 와도 생성 이벤트가 먼저 남는다 |
 | `TRIP_COMPLETED` | trip이 `IN_PROGRESS`에서 `COMPLETED`로 바뀔 때. 이미 종료된 trip의 ty=3을 다시 받으면 남기지 않는다 |
 
-- `payload`는 식별자만 담은 JSON이다: `{"tripId":1,"driverId":1,"vehicleId":"vehicle-001","tid":354}`. 상세 값은 소비자가 `trip` 테이블에서 읽는다.
+- `payload`는 식별자만 담은 JSON이다: `{"tripId":1,"vehicleId":"vehicle-001","tid":354}`. 상세 값은 소비자가 `trip` 테이블에서 읽는다.
 - 새 행은 `status=PENDING`이다. PENDING 행을 발행하고 `PUBLISHED`로 바꾸는 relay는 아직 없다.
 
 "어디까지 읽었나"는 Spring Batch 실행 기록(`targetDate`별 JobInstance)으로 관리한다. 파일별 처리 기록 표는 두지 않는다.

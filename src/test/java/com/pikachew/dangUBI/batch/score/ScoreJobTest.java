@@ -24,8 +24,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxAggregateType;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
@@ -56,9 +54,6 @@ class ScoreJobTest {
 
 	@Autowired
 	private JobRepositoryTestUtils jobRepositoryTestUtils;
-
-	@Autowired
-	private DriverRepository driverRepository;
 
 	@Autowired
 	private TripRepository tripRepository;
@@ -99,15 +94,13 @@ class ScoreJobTest {
 		segmentRepository.deleteAllInBatch();
 		microtripRepository.deleteAllInBatch();
 		tripRepository.deleteAllInBatch();
-		driverRepository.deleteAllInBatch();
 	}
 
 	@Test
 	void 지표와_구간과_리포트를_만들고_COMPLETED로_끝난다() throws Exception {
-		Driver driver = savedDriver();
-		completedTrip(driver, 30_000, "2026-11-25T01:00:00Z", 0x10);
-		completedTrip(driver, 30_000, "2026-11-25T02:00:00Z", 0x20);
-		inProgressTrip(driver);
+		completedTrip(30_000, "2026-11-25T01:00:00Z", 0x10);
+		completedTrip(30_000, "2026-11-25T02:00:00Z", 0x20);
+		inProgressTrip();
 
 		JobExecution execution = jobOperatorTestUtils.startJob();
 
@@ -117,7 +110,7 @@ class ScoreJobTest {
 		assertThat(metricRepository.count()).isEqualTo(2);
 		assertThat(segmentRepository.count()).isEqualTo(1);
 
-		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
+		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(VIN).orElseThrow();
 		// (급가속 1회 × 90 + 급감속 1회 × 200) / 60km
 		assertThat(report.getPenalty()).isCloseTo(290 / 60.0, within(1e-9));
 		assertThat(report.getToday().getDistanceM()).isEqualTo(60_000);
@@ -128,8 +121,7 @@ class ScoreJobTest {
 
 	@Test
 	void 다시_실행하면_새_실행으로_새로_종료된_trip만_처리한다() throws Exception {
-		Driver driver = savedDriver();
-		completedTrip(driver, 30_000, "2026-11-25T01:00:00Z", 0x10);
+		completedTrip(30_000, "2026-11-25T01:00:00Z", 0x10);
 		JobExecution first = jobOperatorTestUtils.startJob();
 
 		JobExecution nothingNew = jobOperatorTestUtils.startJob();
@@ -140,7 +132,7 @@ class ScoreJobTest {
 		assertThat(reportRepository.count()).isEqualTo(1);
 		assertThat(outboxRepository.count()).isEqualTo(1);
 
-		completedTrip(driver, 30_000, "2026-11-26T01:00:00Z", 0x00);
+		completedTrip(30_000, "2026-11-26T01:00:00Z", 0x00);
 		jobOperatorTestUtils.startJob();
 
 		assertThat(metricRepository.count()).isEqualTo(2);
@@ -151,26 +143,21 @@ class ScoreJobTest {
 
 	@Test
 	void 구간을_닫지_못하면_점수는_미산출로_리포트를_남긴다() throws Exception {
-		Driver driver = savedDriver();
-		completedTrip(driver, 20_000, "2026-11-25T01:00:00Z", 0x10);
+		completedTrip(20_000, "2026-11-25T01:00:00Z", 0x10);
 
 		JobExecution execution = jobOperatorTestUtils.startJob();
 
 		assertThat(execution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 		assertThat(segmentRepository.count()).isZero();
-		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
+		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(VIN).orElseThrow();
 		assertThat(report.getScore()).isNull();
 		assertThat(report.getToday().getBrakeCount()).isEqualTo(1);
 	}
 
-	private Driver savedDriver() {
-		return driverRepository.save(Driver.builder().vehicleId(VIN).build());
-	}
-
 	/** dis가 distanceM이고, 종료 1분 전에 eventMask가 켜진 microtrip 하나가 있는 종료된 trip */
-	private void completedTrip(Driver driver, int distanceM, String endedAt, int eventMask) {
+	private void completedTrip(int distanceM, String endedAt, int eventMask) {
 		Instant end = Instant.parse(endedAt);
-		Trip trip = Trip.builder().driver(driver).vehicleId(VIN).tid(++tid).build();
+		Trip trip = Trip.builder().vehicleId(VIN).tid(++tid).build();
 		trip.complete(trip(VIN, tid, end.minusSeconds(1200).toString(), endedAt, distanceM));
 		trip.recordIngestedAt(Instant.now());
 		tripRepository.save(trip);
@@ -183,8 +170,8 @@ class ScoreJobTest {
 				.build());
 	}
 
-	private void inProgressTrip(Driver driver) {
-		Trip trip = tripRepository.save(Trip.builder().driver(driver).vehicleId(VIN).tid(++tid).build());
+	private void inProgressTrip() {
+		Trip trip = tripRepository.save(Trip.builder().vehicleId(VIN).tid(++tid).build());
 		microtripRepository.save(TripMicrotrip.builder()
 				.trip(trip)
 				.idempotencyKey("mt-" + tid)

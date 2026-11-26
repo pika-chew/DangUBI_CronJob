@@ -17,8 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pikachew.dangUBI.batch.score.config.ScoreProperties;
 import com.pikachew.dangUBI.batch.score.writer.TripScoreMetricWriter;
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.score.entity.ScoreTally;
 import com.pikachew.dangUBI.domain.score.entity.TripScoreMetric;
 import com.pikachew.dangUBI.domain.score.repository.TripScoreMetricRepository;
@@ -35,9 +33,6 @@ class ScoreTripReaderTest {
 	private TripScoreMetricRepository metricRepository;
 
 	@Autowired
-	private DriverRepository driverRepository;
-
-	@Autowired
 	private TripRepository tripRepository;
 
 	@Autowired
@@ -48,13 +43,13 @@ class ScoreTripReaderTest {
 
 	@Test
 	void 지표가_없는_COMPLETED_trip만_페이지를_넘기며_id_순서로_읽는다() {
-		Driver driver = driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
-		Trip first = completed(driver, 1);
-		tripRepository.save(Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(2).build());
-		Trip scored = completed(driver, 3);
+		String vehicleId = "0DS614RB2TT925001";
+		Trip first = completed(vehicleId, 1);
+		tripRepository.save(Trip.builder().vehicleId(vehicleId).tid(2).build());
+		Trip scored = completed(vehicleId, 3);
 		metricRepository.save(metric(scored));
-		Trip second = completed(driver, 4);
-		Trip third = completed(driver, 5);
+		Trip second = completed(vehicleId, 4);
+		Trip third = completed(vehicleId, 5);
 		tripRepository.flush();
 
 		ScoreTripReader reader = reader(2, Duration.ZERO);
@@ -64,8 +59,8 @@ class ScoreTripReaderTest {
 
 	@Test
 	void Writer가_저장한_trip은_다음_실행에서_읽지_않는다() {
-		Driver driver = driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
-		Trip trip = completed(driver, 1);
+		String vehicleId = "0DS614RB2TT925001";
+		Trip trip = completed(vehicleId, 1);
 
 		writer.write(new Chunk<>(List.of(metric(trip))));
 		metricRepository.flush();
@@ -76,8 +71,8 @@ class ScoreTripReaderTest {
 
 	@Test
 	void 마지막_적재_후_대기_시간이_지나지_않은_trip은_읽지_않는다() {
-		Driver driver = driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
-		completed(driver, 1);
+		String vehicleId = "0DS614RB2TT925001";
+		completed(vehicleId, 1);
 		tripRepository.flush();
 
 		assertThat(readAll(reader(10, Duration.ofHours(24)))).isEmpty();
@@ -85,8 +80,8 @@ class ScoreTripReaderTest {
 
 	@Test
 	void 늦게_들어온_microtrip으로_다시_적재된_trip은_대기_시간을_다시_기다린다() {
-		Driver driver = driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
-		Trip trip = completed(driver, 1);
+		String vehicleId = "0DS614RB2TT925001";
+		Trip trip = completed(vehicleId, 1);
 		tripRepository.flush();
 		// 기준을 1ms 앞으로 당겨, 이 뒤에 고친 trip은 같은 밀리초여도 기준보다 늦다
 		ScoreTripReader startedBeforeLateIngest = reader(10, Duration.ofMillis(1));
@@ -101,9 +96,9 @@ class ScoreTripReaderTest {
 
 	@Test
 	void 적재_시각이_없는_trip은_읽지_않는다() {
-		Driver driver = driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
-		Trip trip = Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(1).build();
-		trip.complete(trip(driver.getVehicleId(), 1, "2026-11-25T00:00:00Z", "2026-11-25T00:20:00Z", 12_000));
+		String vehicleId = "0DS614RB2TT925001";
+		Trip trip = Trip.builder().vehicleId(vehicleId).tid(1).build();
+		trip.complete(trip(vehicleId, 1, "2026-11-25T00:00:00Z", "2026-11-25T00:20:00Z", 12_000));
 		tripRepository.saveAndFlush(trip);
 
 		assertThat(readAll(reader(10, Duration.ZERO))).isEmpty();
@@ -115,9 +110,9 @@ class ScoreTripReaderTest {
 				scoreProperties.bases()));
 	}
 
-	private Trip completed(Driver driver, long tid) {
-		Trip trip = Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(tid).build();
-		trip.complete(trip(driver.getVehicleId(), tid, "2026-11-25T00:00:00Z", "2026-11-25T00:20:00Z", 12_000));
+	private Trip completed(String vehicleId, long tid) {
+		Trip trip = Trip.builder().vehicleId(vehicleId).tid(tid).build();
+		trip.complete(trip(vehicleId, tid, "2026-11-25T00:00:00Z", "2026-11-25T00:20:00Z", 12_000));
 		trip.recordIngestedAt(Instant.now());
 		return tripRepository.save(trip);
 	}

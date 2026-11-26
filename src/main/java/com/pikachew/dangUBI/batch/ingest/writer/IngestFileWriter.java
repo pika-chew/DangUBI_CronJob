@@ -20,8 +20,6 @@ import org.springframework.batch.infrastructure.item.ItemWriter;
 import org.springframework.stereotype.Component;
 
 import com.pikachew.dangUBI.batch.ingest.dto.ParsedTelemetryFile;
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxAggregateType;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
@@ -44,7 +42,7 @@ import tools.jackson.databind.json.JsonMapper;
  * Repository를 직접 쓰고, chunk 트랜잭션 안에서 실행된다.
  *
  * 1. microtrip: 같은 chunk 안의 중복과 이미 저장된 idempotencyKey를 걸러 새 것만 남긴다.
- * 2. trip: 필요한 (vehicleId, tid)를 조회하고, 없는 운전자와 trip을 만든다.
+ * 2. trip: 필요한 (vehicleId, tid)를 조회하고, 없는 trip을 만든다.
  * 3. 새 microtrip을 저장하고 trip의 수집 범위를 넓힌다.
  * 4. ty=3으로 trip을 종료한다.
  * 5. 새 데이터를 받은 trip에 적재 시각(lastIngestedAt)을 남긴다. scoreJob은 이 시각부터 settle-delay를 기다린다.
@@ -59,7 +57,7 @@ import tools.jackson.databind.json.JsonMapper;
  * [MEMORY RISK] chunk 하나의 데이터와 엔티티가 커밋 전까지 전부 메모리에 남는다 — 장애 테스트 필수 확인 지점
  * ============================================================================================
  * - write()에 들어오는 chunk = 파일 chunk-size개의 Snapshot 전부 (TelemetryJsonlParser 참고).
- * - 여기서 저장·조회한 Driver·Trip·TripMicrotrip 엔티티는 chunk 커밋 전까지 Hibernate 영속성 컨텍스트에 계속 남는다.
+ * - 여기서 저장·조회한 Trip·TripMicrotrip 엔티티는 chunk 커밋 전까지 Hibernate 영속성 컨텍스트에 계속 남는다.
  *   microtrip이 수십만 건이면 Snapshot + 엔티티가 동시에 메모리에 있다.
  * - queryTrips는 "차량 수 × tid 수" 범위로 넓게 가져온 뒤 거른다. chunk-size를 키우면 조회량과 메모리가 함께 커진다.
  * - 장애 테스트: 큰 chunk에서 힙 사용량, GC 시간, 커밋 시간(flush)을 확인한다.
@@ -70,7 +68,6 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 
-	private final DriverRepository driverRepository;
 	private final TripRepository tripRepository;
 	private final TripMicrotripRepository microtripRepository;
 	private final OutboxRepository outboxRepository;
@@ -97,12 +94,7 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 		Set<TripKey> missingTrips = new LinkedHashSet<>(tripKeys);
 		missingTrips.removeAll(trips.keySet());
 
-		Set<String> vehicleIds = missingTrips.stream().map(TripKey::vehicleId).collect(Collectors.toCollection(LinkedHashSet::new));
-		Map<String, Driver> drivers = queryDrivers(vehicleIds);
-		Set<String> missingDrivers = new LinkedHashSet<>(vehicleIds);
-		missingDrivers.removeAll(drivers.keySet());
-		drivers.putAll(createDrivers(missingDrivers));
-		Map<TripKey, Trip> createdTrips = createTrips(missingTrips, drivers);
+		Map<TripKey, Trip> createdTrips = createTrips(missingTrips);
 		trips.putAll(createdTrips);
 
 		saveMicrotrips(newMicrotrips, trips);
@@ -156,29 +148,10 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 						(a, b) -> a, HashMap::new));
 	}
 
-	private Map<String, Driver> queryDrivers(Collection<String> vehicleIds) {
-		if (vehicleIds.isEmpty()) {
-			return new HashMap<>();
-		}
-		return driverRepository.findAllByVehicleIdIn(vehicleIds).stream()
-				.collect(Collectors.toMap(Driver::getVehicleId, Function.identity(), (a, b) -> a, HashMap::new));
-	}
-
-	private Map<String, Driver> createDrivers(Collection<String> vehicleIds) {
-		List<Driver> created = vehicleIds.stream()
-				.map(vehicleId -> Driver.builder()
-						.vehicleId(vehicleId)
-						.build())
-				.toList();
-		return driverRepository.saveAll(created).stream()
-				.collect(Collectors.toMap(Driver::getVehicleId, Function.identity()));
-	}
-
 	/** 처음 본 trip은 진행 중 상태로 만든다. ty=3이 같이 왔으면 {@link #completeTrips}가 이어서 종료한다 */
-	private Map<TripKey, Trip> createTrips(Collection<TripKey> keys, Map<String, Driver> drivers) {
+	private Map<TripKey, Trip> createTrips(Collection<TripKey> keys) {
 		List<Trip> created = keys.stream()
 				.map(key -> Trip.builder()
-						.driver(drivers.get(key.vehicleId()))
 						.vehicleId(key.vehicleId())
 						.tid(key.tid())
 						.build())
@@ -229,7 +202,7 @@ public class IngestFileWriter implements ItemWriter<ParsedTelemetryFile> {
 						.aggregateId(trip.getId())
 						.eventType(eventType)
 						.payload(jsonMapper.writeValueAsString(
-								new TripOutboxPayload(trip.getId(), trip.getDriver().getId(), trip.getVehicleId(), trip.getTid())))
+								new TripOutboxPayload(trip.getId(), trip.getVehicleId(), trip.getTid())))
 						.build())
 				.toList();
 		outboxRepository.saveAll(outboxes);

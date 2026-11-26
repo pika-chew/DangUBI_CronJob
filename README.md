@@ -17,7 +17,7 @@ java -jar build/libs/dangUBI-0.0.1-SNAPSHOT.jar \
 
 - `local` 프로필은 테이블을 자동으로 만든다.
   - Spring Batch 메타 테이블(`BATCH_*`): `spring.batch.jdbc.initialize-schema=always`
-  - 업무 테이블(`driver`, `trip`, `trip_microtrip`, `outbox`): `src/main/resources/db/trip-schema-mysql.sql`
+  - 업무 테이블(`trip`, `trip_microtrip`, `outbox`): `src/main/resources/db/trip-schema-mysql.sql`
 - 운영은 둘 다 자동으로 만들지 않는다. 배포 전에 `spring-batch-core` jar 안의 `org/springframework/batch/core/schema-mysql.sql`과 `db/trip-schema-mysql.sql`을 실행해 둔다.
 - Job 파라미터는 `key=value` 형식으로 넘긴다. 같은 파라미터로 이미 COMPLETED된 Job은 다시 돌지 않는다.
 - 종료 코드: 성공 0, 실패 1.
@@ -27,7 +27,7 @@ java -jar build/libs/dangUBI-0.0.1-SNAPSHOT.jar \
 | Job | 파라미터 | 설명 |
 | --- | --- | --- |
 | `reconcileJob` | `targetDate` (필수, yyyy-MM-dd) | S3 원본 목록과 Swift 목록을 키로 비교해 Swift에 없는 객체를 SQS로 재큐잉한다. 직접 복사하지 않는다 |
-| `ingestJob` | `targetDate` (필수, yyyy-MM-dd, UTC), `rerun` (선택, 정수) | Swift에 저장된 그날 수집 파일(gz JSONL)을 읽어 운전자·trip·microtrip을 MySQL에 적재한다. 실패한 실행은 같은 파라미터로 다시 돌리면 멈춘 파일 다음부터 이어서 처리한다. 완료된 날짜를 다시 적재하려면 `rerun=2`처럼 이전에 쓰지 않은 값을 붙인다. 다시 적재해도 중복으로 쌓이지 않는다 |
+| `ingestJob` | `targetDate` (필수, yyyy-MM-dd, UTC), `rerun` (선택, 정수) | Swift에 저장된 그날 수집 파일(gz JSONL)을 읽어 trip·microtrip을 MySQL에 적재한다. 실패한 실행은 같은 파라미터로 다시 돌리면 멈춘 파일 다음부터 이어서 처리한다. 완료된 날짜를 다시 적재하려면 `rerun=2`처럼 이전에 쓰지 않은 값을 붙인다. 다시 적재해도 중복으로 쌓이지 않는다 |
 
 저장 경로, 파일 형식, 적재 규칙은 [docs/ingest-spec.md](docs/ingest-spec.md)에 있다.
 
