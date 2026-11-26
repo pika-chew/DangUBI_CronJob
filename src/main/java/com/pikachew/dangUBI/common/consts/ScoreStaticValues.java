@@ -18,8 +18,8 @@ public final class ScoreStaticValues {
 	public static final String SCORE_CHUNK_SIZE_PROPERTY = "${ubi.batch.score.chunk-size}";
 
 	// 이벤트 묶음 비트 (3장). 묶음 안의 비트가 하나라도 켜지면 그 묶음의 이벤트다
-	/** 과속: bit8 */
-	public static final int SCORE_OVERSPEED_MASK = 0x100;
+	/** 과속: bit7 */
+	public static final int SCORE_OVERSPEED_MASK = 0x80;
 	/** 급가속: bit0 급출발 | bit5 급가속 */
 	public static final int SCORE_ACCEL_MASK = 0x21;
 	/** 급감속: bit4 급감속 | bit6 급정지 */

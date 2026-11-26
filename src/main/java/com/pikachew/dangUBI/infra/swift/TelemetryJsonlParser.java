@@ -188,8 +188,9 @@ public final class TelemetryJsonlParser {
 		}
 
 		/**
-		 * em: Lambda는 JSON 숫자(10진)로 보낸다. 256 = bit8(과속).
-		 * 문서 예시처럼 문자열로 오면 16진으로 본다. "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다
+		 * em: Lambda는 JSON 숫자(10진)로 보낸다. 128 = bit7(과속).
+		 * 문서 예시처럼 문자열로 오면 16진으로 본다. "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다.
+		 * 정의된 비트(bit0–bit7)를 넘는 값(예: 256)은 그 필드만 null로 둔다
 		 */
 		Integer eventMask(JsonNode parent) {
 			JsonNode node = parent.get("em");
