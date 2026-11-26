@@ -76,7 +76,7 @@ class ScoreSegmentRepositoryTest {
 		return driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
 	}
 
-	private TripScoreMetric metric(Driver driver, int tid, String endedAt) {
+	private TripScoreMetric metric(Driver driver, long tid, String endedAt) {
 		Trip trip = tripRepository.save(Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(tid).build());
 		return TripScoreMetric.builder()
 				.trip(trip)

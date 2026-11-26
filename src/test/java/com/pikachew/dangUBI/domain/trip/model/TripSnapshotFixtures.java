@@ -8,12 +8,12 @@ public final class TripSnapshotFixtures {
 	private TripSnapshotFixtures() {
 	}
 
-	public static TripSnapshot trip(String vehicleId, int tid, String startedAt, String endedAt, int distance) {
+	public static TripSnapshot trip(String vehicleId, long tid, String startedAt, String endedAt, int distance) {
 		return new TripSnapshot(vehicleId, "trip-" + vehicleId + "-" + tid, Instant.parse(endedAt), tid,
 				Instant.parse(startedAt), Instant.parse(endedAt), distance, 90, 30, 3600);
 	}
 
-	public static MicrotripSnapshot microtrip(String vehicleId, int tid, String idempotencyKey, String collectedAt) {
+	public static MicrotripSnapshot microtrip(String vehicleId, long tid, String idempotencyKey, String collectedAt) {
 		return new MicrotripSnapshot(vehicleId, idempotencyKey, Instant.parse(collectedAt), tid, Instant.parse(collectedAt),
 				70, 0x28);
 	}

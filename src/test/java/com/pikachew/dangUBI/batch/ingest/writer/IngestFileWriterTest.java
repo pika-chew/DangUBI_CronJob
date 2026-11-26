@@ -82,6 +82,18 @@ class IngestFileWriterTest {
 	}
 
 	@Test
+	void int_범위를_넘는_tid도_trip으로_적재한다() {
+		long tid = 30836460003626L;
+
+		write(List.of(trip(V1, tid, TRIP_START, TRIP_END, 30000)),
+				List.of(microtrip(V1, tid, "m1", "2026-11-10T10:30:00Z")));
+
+		Trip trip = findTrip(V1, tid);
+		assertThat(trip.getTid()).isEqualTo(tid);
+		assertThat(microtripRepository.findByTripOrderByCollectedAt(trip)).hasSize(1);
+	}
+
+	@Test
 	void ty3만_오면_종료된_trip을_만든다() {
 		write(List.of(trip(V1, 354, TRIP_START, TRIP_END, 30000)), List.of());
 
@@ -300,7 +312,7 @@ class IngestFileWriterTest {
 		assertThat(findTrip(V1, 354).getLastIngestedAt()).isEqualTo(LONG_AGO);
 	}
 
-	private void markIngestedLongAgo(String vehicleId, int tid) {
+	private void markIngestedLongAgo(String vehicleId, long tid) {
 		findTrip(vehicleId, tid).recordIngestedAt(LONG_AGO);
 		flushAndClear();
 	}
@@ -323,7 +335,7 @@ class IngestFileWriterTest {
 		return new ParsedTelemetryFile("firehose/processed/year=2026/month=11/day=10/hour=03/" + name + ".jsonl.gz", trips, microtrips, 0);
 	}
 
-	private Trip findTrip(String vehicleId, int tid) {
+	private Trip findTrip(String vehicleId, long tid) {
 		return tripRepository.findByVehicleIdAndTid(vehicleId, tid).orElseThrow();
 	}
 

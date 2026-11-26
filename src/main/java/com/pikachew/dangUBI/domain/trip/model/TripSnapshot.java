@@ -12,7 +12,7 @@ public record TripSnapshot(
 		String vehicleId,           // VIN
 		String idempotencyKey,
 		Instant receivedAt,
-		int tid,
+		long tid,
 		Instant startedAt,          // stt (UTC)
 		Instant endedAt,            // edt (UTC)
 		Integer distance,           // dis: 운행 한 번의 누적 주행거리 (m)

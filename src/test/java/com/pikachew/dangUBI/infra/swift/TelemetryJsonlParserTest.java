@@ -35,7 +35,13 @@ public class TelemetryJsonlParserTest {
 			{"vehicleId":"vehicle-001","ts":1793575800100,"ty":4,"schemaVersion":1,"idempotencyKey":"example-microtrip-1",\
 			"pld":{"tid":354,"clt":1793575800000,"sp":70,"em":"28"}}""";
 
-	private static final String KEY = "firehose/processed/year=2026/month=11/day=10/hour=03/a.jsonl.gz";
+	/** Lambda를 거친 실제 ty=4 출력 (2026-11-26). tid가 int 범위를 넘고 sp가 소수다 */
+	private static final String LAMBDA_MICROTRIP_LINE = """
+			{"vehicleId":"0DSN7PNB6KT000009","ts":1795643508000,"ty":4,"schemaVersion":1,\
+			"idempotencyKey":"4399a0467bd23a946b9220205ed8385e471a7cfb577084493f39cb85e7ea0415",\
+			"pld":{"tid":30836460003626,"clt":1795643508000,"sp":42.392873068822745,"em":0}}""";
+
+	private static final String KEY ="firehose/processed/year=2026/month=11/day=10/hour=03/a.jsonl.gz";
 
 	// ---- 한 줄 ----
 
@@ -95,6 +101,14 @@ public class TelemetryJsonlParserTest {
 		assertThat(microtrip.collectedAt()).isEqualTo(Instant.ofEpochMilli(1793575800000L));
 		assertThat(microtrip.speed()).isEqualTo(70);
 		assertThat(microtrip.eventMask()).isEqualTo(0x28);
+	}
+
+	@Test
+	void int_범위를_넘는_tid도_받는다() {
+		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(LAMBDA_MICROTRIP_LINE);
+
+		assertThat(microtrip.vehicleId()).isEqualTo("0DSN7PNB6KT000009");
+		assertThat(microtrip.tid()).isEqualTo(30836460003626L);
 	}
 
 	@Test

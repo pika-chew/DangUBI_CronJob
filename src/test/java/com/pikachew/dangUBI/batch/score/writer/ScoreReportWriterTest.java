@@ -71,7 +71,7 @@ class ScoreReportWriterTest {
 	@Autowired
 	private ScoreProperties scoreProperties;
 
-	private int tid;
+	private long tid;
 
 	@Test
 	void 구간_거리를_채운_지표로_구간을_닫고_나머지는_남긴다() {

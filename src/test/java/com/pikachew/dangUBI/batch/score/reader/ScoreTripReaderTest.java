@@ -115,7 +115,7 @@ class ScoreTripReaderTest {
 				scoreProperties.bases()));
 	}
 
-	private Trip completed(Driver driver, int tid) {
+	private Trip completed(Driver driver, long tid) {
 		Trip trip = Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(tid).build();
 		trip.complete(trip(driver.getVehicleId(), tid, "2026-11-25T00:00:00Z", "2026-11-25T00:20:00Z", 12_000));
 		trip.recordIngestedAt(Instant.now());

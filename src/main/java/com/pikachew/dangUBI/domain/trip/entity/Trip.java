@@ -48,7 +48,7 @@ public class Trip extends BaseTimeEntity {
 	private String vehicleId;
 
 	@Column(nullable = false)
-	private int tid;
+	private long tid;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 16)
@@ -76,7 +76,7 @@ public class Trip extends BaseTimeEntity {
 
 	/** 처음 본 trip은 진행 중 상태로 만든다. ty=3이 먼저 오면 바로 {@link #complete}가 이어진다 */
 	@Builder
-	private Trip(Driver driver, String vehicleId, int tid) {
+	private Trip(Driver driver, String vehicleId, long tid) {
 		this.driver = driver;
 		this.vehicleId = vehicleId;
 		this.tid = tid;

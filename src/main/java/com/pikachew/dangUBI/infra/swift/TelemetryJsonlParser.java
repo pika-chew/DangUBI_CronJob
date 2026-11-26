@@ -119,7 +119,7 @@ public final class TelemetryJsonlParser {
 
 		Fields fields = new Fields(idempotencyKey);
 		Instant receivedAt = fields.epochMillis(root, "ts");
-		int tid = requiredInt(pld, "tid");
+		long tid = requiredLong(pld, "tid");
 
 		return switch (ty) {
 			case TELEMETRY_TY_TRIP -> new TripSnapshot(vehicleId, idempotencyKey, receivedAt, tid,

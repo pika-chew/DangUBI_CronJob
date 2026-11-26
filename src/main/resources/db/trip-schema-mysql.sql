@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS trip (
     id                    BIGINT        NOT NULL AUTO_INCREMENT,
     driver_id             BIGINT        NOT NULL,
     vehicle_id            VARCHAR(64)   COLLATE utf8mb4_bin  NOT NULL,
-    tid                   INT           NOT NULL,
+    tid                   BIGINT        NOT NULL,
     status                VARCHAR(16)   NOT NULL,
     started_at            DATETIME(3)   NULL,
     ended_at              DATETIME(3)   NULL,
