@@ -1,6 +1,7 @@
 package com.pikachew.dangUBI.infra.swift;
 
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_EVENT_MASK_HEX_PATTERN;
+import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_EVENT_MASK_MAX;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_SUPPORTED_SCHEMA_VERSION;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_TY_MICROTRIP;
 import static com.pikachew.dangUBI.common.consts.TelemetryStaticValues.TELEMETRY_TY_TRIP;
@@ -186,18 +187,25 @@ public final class TelemetryJsonlParser {
 			return value == null ? invalid(name, node) : Instant.ofEpochMilli(value);
 		}
 
-		/** em: "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다. 숫자 28로 와도 16진으로 본다 */
+		/**
+		 * em: Lambda는 JSON 숫자(10진)로 보낸다. 256 = bit8(과속).
+		 * 문서 예시처럼 문자열로 오면 16진으로 본다. "28"은 0x28 = bit3(급유턴) + bit5(급가속)이다
+		 */
 		Integer eventMask(JsonNode parent) {
 			JsonNode node = parent.get("em");
 			if (JsonNodeUtils.isAbsent(node)) {
 				return null;
 			}
-			String text = node.isString() ? node.stringValue().trim()
-					: node.isIntegralNumber() ? node.asString() : null;
-			if (text == null || !TELEMETRY_EVENT_MASK_HEX_PATTERN.matcher(text).matches()) {
+			Integer value = node.isString() ? hexEventMask(node.stringValue().trim())
+					: node.isIntegralNumber() ? JsonNodeUtils.toInteger(node) : null;
+			if (value == null || value < 0 || value > TELEMETRY_EVENT_MASK_MAX) {
 				return invalid("em", node);
 			}
-			return Integer.parseInt(text, 16);
+			return value;
+		}
+
+		private static Integer hexEventMask(String text) {
+			return TELEMETRY_EVENT_MASK_HEX_PATTERN.matcher(text).matches() ? Integer.parseInt(text, 16) : null;
 		}
 
 		private <T> T invalid(String name, JsonNode node) {

@@ -45,7 +45,7 @@ class TripScoreMetricProcessorTest {
 		given(microtripRepository.findByTripOrderByCollectedAt(trip)).willReturn(List.of(
 				// KST 01:10 급감속(야간 40%), KST 01:10:02 과속 90km/h, em 없는 주기 1건
 				mt("2026-11-24T16:10:00Z", 0x10, 60),
-				mt("2026-11-24T16:10:02Z", 0x80, 90),
+				mt("2026-11-24T16:10:02Z", 0x100, 90),
 				mt("2026-11-24T16:10:04Z", null, 90)));
 
 		TripScoreMetric metric = processor.process(1L);

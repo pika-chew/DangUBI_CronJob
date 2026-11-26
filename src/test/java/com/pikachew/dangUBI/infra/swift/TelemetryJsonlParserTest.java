@@ -151,10 +151,31 @@ public class TelemetryJsonlParserTest {
 	}
 
 	@Test
-	void em이_숫자로_와도_16진으로_해석한다() {
-		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"em\":28"));
+	void em이_숫자로_오면_10진으로_해석한다() {
+		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"em\":40"));
 
 		assertThat(microtrip.eventMask()).isEqualTo(0x28);
+	}
+
+	@Test
+	void Lambda가_보낸_과속_em_256은_bit8이다() {
+		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"em\":256"));
+
+		assertThat(microtrip.eventMask()).isEqualTo(1 << 8);
+	}
+
+	@Test
+	void 문자열_em은_bit8까지_16진으로_받는다() {
+		MicrotripSnapshot microtrip = (MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"em\":\"100\""));
+
+		assertThat(microtrip.eventMask()).isEqualTo(1 << 8);
+	}
+
+	@Test
+	void 정의된_비트를_넘는_em은_그_필드만_null이다() {
+		assertThat(((MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"em\":512"))).eventMask()).isNull();
+		assertThat(((MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"em\":-1"))).eventMask()).isNull();
+		assertThat(((MicrotripSnapshot) TelemetryJsonlParser.parseLine(microtripPld("\"em\":\"200\""))).eventMask()).isNull();
 	}
 
 	@Test

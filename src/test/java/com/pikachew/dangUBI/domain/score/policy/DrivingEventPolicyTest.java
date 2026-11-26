@@ -86,14 +86,14 @@ class DrivingEventPolicyTest {
 
 	@Test
 	void 과속거리는_과속_주기마다_속도_곱하기_2초다() {
-		DrivingEventCounts counts = total(mt(0, 0x80, 72), mt(2, 0x80, 72), mt(4, 0x80, 90));
+		DrivingEventCounts counts = total(mt(0, 0x100, 72), mt(2, 0x100, 72), mt(4, 0x100, 90));
 
 		assertThat(counts.overspeedKm()).isCloseTo((72 + 72 + 90) * 2 / 3600.0, within(1e-9));
 	}
 
 	@Test
 	void 속도가_없는_과속_주기는_과속거리에서_뺀다() {
-		assertThat(total(mt(0, 0x80, null)).overspeedKm()).isZero();
+		assertThat(total(mt(0, 0x100, null)).overspeedKm()).isZero();
 	}
 
 	@Test
@@ -109,7 +109,7 @@ class DrivingEventPolicyTest {
 		// 2026-11-24T16:30Z = KST 01:30
 		DrivingEventResult result = evaluate(
 				mt(Instant.parse("2026-11-24T16:30:00Z"), 0x10, 50),
-				mt(Instant.parse("2026-11-24T16:30:10Z"), 0x80, 90),
+				mt(Instant.parse("2026-11-24T16:30:10Z"), 0x100, 90),
 				mt(DAY, 0x20, 50));
 
 		assertThat(result.countsByKstHour()).containsOnlyKeys(1, 10);
