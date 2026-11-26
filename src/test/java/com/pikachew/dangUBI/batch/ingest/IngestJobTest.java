@@ -38,7 +38,6 @@ import com.pikachew.dangUBI.batch.ingest.port.TelemetryFileReader;
 import com.pikachew.dangUBI.common.consts.IngestStaticValues;
 import com.pikachew.dangUBI.common.exception.ErrorStatus;
 import com.pikachew.dangUBI.common.exception.GeneralException;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
 import com.pikachew.dangUBI.domain.outbox.repository.OutboxRepository;
@@ -65,9 +64,6 @@ class IngestJobTest {
 
 	@Autowired
 	private JobRepositoryTestUtils jobRepositoryTestUtils;
-
-	@Autowired
-	private DriverRepository driverRepository;
 
 	@Autowired
 	private TripRepository tripRepository;
@@ -97,7 +93,6 @@ class IngestJobTest {
 		outboxRepository.deleteAllInBatch();
 		microtripRepository.deleteAllInBatch();
 		tripRepository.deleteAllInBatch();
-		driverRepository.deleteAllInBatch();
 	}
 
 	@Test
@@ -128,7 +123,6 @@ class IngestJobTest {
 				.toJobParameters());
 
 		assertThat(rerun.getStatus()).isEqualTo(BatchStatus.COMPLETED);
-		assertThat(driverRepository.count()).isEqualTo(1);
 		assertThat(tripRepository.count()).isEqualTo(1);
 		assertThat(microtripRepository.count()).isEqualTo(1);
 		assertThat(outboxRepository.count()).isEqualTo(2);

@@ -12,8 +12,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.score.entity.ScoreSegment;
 import com.pikachew.dangUBI.domain.score.entity.ScoreTally;
 import com.pikachew.dangUBI.domain.score.entity.TripScoreMetric;
@@ -33,62 +31,55 @@ class ScoreSegmentRepositoryTest {
 	private TripScoreMetricRepository metricRepository;
 
 	@Autowired
-	private DriverRepository driverRepository;
-
-	@Autowired
 	private TripRepository tripRepository;
 
 	@Test
 	void 마지막_구간과_최근_구간_목록을_순번_역순으로_읽는다() {
-		Driver driver = savedDriver();
-		segmentRepository.save(segment(driver, 1));
-		segmentRepository.save(segment(driver, 2));
-		segmentRepository.saveAndFlush(segment(driver, 3));
+		String vehicleId = "0DS614RB2TT925001";
+		segmentRepository.save(segment(vehicleId, 1));
+		segmentRepository.save(segment(vehicleId, 2));
+		segmentRepository.saveAndFlush(segment(vehicleId, 3));
 
-		assertThat(segmentRepository.findTopByVehicleIdOrderBySequenceNoDesc(driver.getVehicleId()).orElseThrow().getSequenceNo()).isEqualTo(3);
-		assertThat(segmentRepository.findTop100ByVehicleIdOrderBySequenceNoDesc(driver.getVehicleId()))
+		assertThat(segmentRepository.findTopByVehicleIdOrderBySequenceNoDesc(vehicleId).orElseThrow().getSequenceNo()).isEqualTo(3);
+		assertThat(segmentRepository.findTop100ByVehicleIdOrderBySequenceNoDesc(vehicleId))
 				.extracting(ScoreSegment::getSequenceNo).containsExactly(3, 2, 1);
 	}
 
 	@Test
 	void 같은_차량의_같은_순번은_두_번_저장되지_않는다() {
-		Driver driver = savedDriver();
-		segmentRepository.saveAndFlush(segment(driver, 1));
+		String vehicleId = "0DS614RB2TT925001";
+		segmentRepository.saveAndFlush(segment(vehicleId, 1));
 
-		assertThatThrownBy(() -> segmentRepository.saveAndFlush(segment(driver, 1)))
+		assertThatThrownBy(() -> segmentRepository.saveAndFlush(segment(vehicleId, 1)))
 				.isInstanceOf(DataIntegrityViolationException.class);
 	}
 
 	@Test
 	void 구간에_묶이지_않은_지표만_종료_시각_순서로_읽는다() {
-		Driver driver = savedDriver();
-		TripScoreMetric late = metricRepository.save(metric(driver, 1, "2026-11-25T03:00:00Z"));
-		TripScoreMetric early = metricRepository.save(metric(driver, 2, "2026-11-25T01:00:00Z"));
-		TripScoreMetric segmented = metricRepository.save(metric(driver, 3, "2026-11-25T00:00:00Z"));
-		segmented.assignSegment(segmentRepository.save(segment(driver, 1)));
+		String vehicleId = "0DS614RB2TT925001";
+		TripScoreMetric late = metricRepository.save(metric(vehicleId, 1, "2026-11-25T03:00:00Z"));
+		TripScoreMetric early = metricRepository.save(metric(vehicleId, 2, "2026-11-25T01:00:00Z"));
+		TripScoreMetric segmented = metricRepository.save(metric(vehicleId, 3, "2026-11-25T00:00:00Z"));
+		segmented.assignSegment(segmentRepository.save(segment(vehicleId, 1)));
 		metricRepository.flush();
 
-		assertThat(metricRepository.findByVehicleIdAndSegmentIsNullOrderByEndedAtAscIdAsc(driver.getVehicleId()))
+		assertThat(metricRepository.findByVehicleIdAndSegmentIsNullOrderByEndedAtAscIdAsc(vehicleId))
 				.containsExactly(early, late);
 	}
 
-	private Driver savedDriver() {
-		return driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
-	}
-
-	private TripScoreMetric metric(Driver driver, long tid, String endedAt) {
-		Trip trip = tripRepository.save(Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(tid).build());
+	private TripScoreMetric metric(String vehicleId, long tid, String endedAt) {
+		Trip trip = tripRepository.save(Trip.builder().vehicleId(vehicleId).tid(tid).build());
 		return TripScoreMetric.builder()
 				.trip(trip)
-				.vehicleId(driver.getVehicleId())
+				.vehicleId(vehicleId)
 				.endedAt(Instant.parse(endedAt))
 				.tally(ScoreTally.builder().distanceM(10_000).build())
 				.build();
 	}
 
-	private static ScoreSegment segment(Driver driver, int sequenceNo) {
+	private static ScoreSegment segment(String vehicleId, int sequenceNo) {
 		return ScoreSegment.builder()
-				.vehicleId(driver.getVehicleId())
+				.vehicleId(vehicleId)
 				.sequenceNo(sequenceNo)
 				.tally(ScoreTally.builder().distanceM(125_000).brakeCount(2).build())
 				.penalty(3.2)

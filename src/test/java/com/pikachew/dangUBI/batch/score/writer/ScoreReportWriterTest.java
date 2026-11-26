@@ -18,8 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pikachew.dangUBI.batch.score.config.ScoreProperties;
 import com.pikachew.dangUBI.batch.score.reader.ScoreVehicleReader;
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxAggregateType;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
@@ -48,9 +46,6 @@ import tools.jackson.databind.json.JsonMapper;
 class ScoreReportWriterTest {
 
 	@Autowired
-	private DriverRepository driverRepository;
-
-	@Autowired
 	private TripRepository tripRepository;
 
 	@Autowired
@@ -75,14 +70,14 @@ class ScoreReportWriterTest {
 
 	@Test
 	void 구간_거리를_채운_지표로_구간을_닫고_나머지는_남긴다() {
-		Driver driver = savedDriver();
-		TripScoreMetric first = savedMetric(driver, "2026-11-25T00:00:00Z", tally(30_000, 0, 1));
-		TripScoreMetric second = savedMetric(driver, "2026-11-25T01:00:00Z", tally(30_000, 2, 0));
-		TripScoreMetric rest = savedMetric(driver, "2026-11-25T02:00:00Z", tally(10_000, 0, 0));
+		String vehicleId = "0DS614RB2TT925001";
+		TripScoreMetric first = savedMetric(vehicleId, "2026-11-25T00:00:00Z", tally(30_000, 0, 1));
+		TripScoreMetric second = savedMetric(vehicleId, "2026-11-25T01:00:00Z", tally(30_000, 2, 0));
+		TripScoreMetric rest = savedMetric(vehicleId, "2026-11-25T02:00:00Z", tally(10_000, 0, 0));
 
-		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
+		writer().write(new Chunk<>(List.of(vehicleId)));
 
-		List<ScoreSegment> segments = segmentRepository.findTop100ByVehicleIdOrderBySequenceNoDesc(driver.getVehicleId());
+		List<ScoreSegment> segments = segmentRepository.findTop100ByVehicleIdOrderBySequenceNoDesc(vehicleId);
 		assertThat(segments).hasSize(1);
 		assertThat(segments.get(0).getSequenceNo()).isEqualTo(1);
 		assertThat(segments.get(0).getTally().getDistanceM()).isEqualTo(60_000);
@@ -95,14 +90,14 @@ class ScoreReportWriterTest {
 
 	@Test
 	void 오늘_카운트와_반영_감점으로_리포트를_남기고_outbox에_이벤트를_기록한다() {
-		Driver driver = savedDriver();
-		savedMetric(driver, "2026-11-25T00:00:00Z", tally(30_000, 0, 1));
-		savedMetric(driver, "2026-11-25T01:00:00Z", tally(30_000, 2, 0));
-		savedMetric(driver, "2026-11-25T02:00:00Z", tally(10_000, 0, 0));
+		String vehicleId = "0DS614RB2TT925001";
+		savedMetric(vehicleId, "2026-11-25T00:00:00Z", tally(30_000, 0, 1));
+		savedMetric(vehicleId, "2026-11-25T01:00:00Z", tally(30_000, 2, 0));
+		savedMetric(vehicleId, "2026-11-25T02:00:00Z", tally(10_000, 0, 0));
 
-		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
+		writer().write(new Chunk<>(List.of(vehicleId)));
 
-		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
+		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(vehicleId).orElseThrow();
 		assertThat(report.getVehicleId()).isEqualTo("0DS614RB2TT925001");
 		assertThat(report.getReportDate()).isEqualTo(LocalDate.now(SCORE_ZONE));
 		assertThat(report.getPenalty()).isCloseTo(380 / 60.0, within(1e-9));
@@ -113,7 +108,7 @@ class ScoreReportWriterTest {
 		assertThat(report.getWindow()).isEqualTo(ScoreEventSummary.builder().distanceM(60_000).accelCount(2).brakeCount(1).build());
 		assertThat(jsonMapper.readValue(report.getRecentScores(), double[].class))
 				.containsExactly(new double[] {100 - 380 / 60.0}, within(1e-9));
-		assertThat(metricRepository.findByVehicleIdAndReportIsNullOrderByEndedAtAscIdAsc(driver.getVehicleId())).isEmpty();
+		assertThat(metricRepository.findByVehicleIdAndReportIsNullOrderByEndedAtAscIdAsc(vehicleId)).isEmpty();
 
 		List<Outbox> outboxes = outboxRepository.findAllByAggregateTypeAndAggregateIdOrderById(
 				OutboxAggregateType.VEHICLE_SCORE_REPORT, report.getId());
@@ -133,12 +128,12 @@ class ScoreReportWriterTest {
 
 	@Test
 	void 닫힌_구간이_없으면_점수는_미산출이다() {
-		Driver driver = savedDriver();
-		savedMetric(driver, "2026-11-25T00:00:00Z", tally(10_000, 1, 0));
+		String vehicleId = "0DS614RB2TT925001";
+		savedMetric(vehicleId, "2026-11-25T00:00:00Z", tally(10_000, 1, 0));
 
-		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
+		writer().write(new Chunk<>(List.of(vehicleId)));
 
-		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
+		VehicleScoreReport report = reportRepository.findTopByVehicleIdOrderByIdDesc(vehicleId).orElseThrow();
 		assertThat(report.getScore()).isNull();
 		assertThat(report.getPenalty()).isNull();
 		assertThat(report.getRecentScores()).isEqualTo("[]");
@@ -153,19 +148,19 @@ class ScoreReportWriterTest {
 
 	@Test
 	void 다음_리포트는_새_구간을_반영_범위에_더하고_직전_점수와의_차이를_남긴다() {
-		Driver driver = savedDriver();
-		savedMetric(driver, "2026-11-25T00:00:00Z", tally(30_000, 0, 1));
-		savedMetric(driver, "2026-11-25T01:00:00Z", tally(30_000, 2, 0));
-		savedMetric(driver, "2026-11-25T02:00:00Z", tally(10_000, 0, 0));
-		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
-		double firstScore = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow().getScore();
+		String vehicleId = "0DS614RB2TT925001";
+		savedMetric(vehicleId, "2026-11-25T00:00:00Z", tally(30_000, 0, 1));
+		savedMetric(vehicleId, "2026-11-25T01:00:00Z", tally(30_000, 2, 0));
+		savedMetric(vehicleId, "2026-11-25T02:00:00Z", tally(10_000, 0, 0));
+		writer().write(new Chunk<>(List.of(vehicleId)));
+		double firstScore = reportRepository.findTopByVehicleIdOrderByIdDesc(vehicleId).orElseThrow().getScore();
 
 		// 남아 있던 10km + 새 45km = 55km로 두 번째 구간이 닫힌다
-		savedMetric(driver, "2026-11-26T00:00:00Z", tally(45_000, 0, 0));
-		writer().write(new Chunk<>(List.of(driver.getVehicleId())));
+		savedMetric(vehicleId, "2026-11-26T00:00:00Z", tally(45_000, 0, 0));
+		writer().write(new Chunk<>(List.of(vehicleId)));
 
-		VehicleScoreReport second = reportRepository.findTopByVehicleIdOrderByIdDesc(driver.getVehicleId()).orElseThrow();
-		assertThat(segmentRepository.findTop100ByVehicleIdOrderBySequenceNoDesc(driver.getVehicleId()))
+		VehicleScoreReport second = reportRepository.findTopByVehicleIdOrderByIdDesc(vehicleId).orElseThrow();
+		assertThat(segmentRepository.findTop100ByVehicleIdOrderBySequenceNoDesc(vehicleId))
 				.extracting(ScoreSegment::getSequenceNo).containsExactly(2, 1);
 		assertThat(second.getWindowSegmentCount()).isEqualTo(2);
 		assertThat(second.getPenalty()).isCloseTo(380 / 115.0, within(1e-9));
@@ -175,11 +170,11 @@ class ScoreReportWriterTest {
 
 	@Test
 	void Reader는_리포트에_담지_않은_지표가_있는_차량만_VIN_순서로_넘긴다() {
-		Driver done = savedDriver();
+		String done = "0DS614RB2TT925001";
 		savedMetric(done, "2026-11-25T00:00:00Z", tally(10_000, 0, 0));
-		writer().write(new Chunk<>(List.of(done.getVehicleId())));
-		Driver pendingA = driverRepository.save(Driver.builder().vehicleId("VIN-A").build());
-		Driver pendingB = driverRepository.save(Driver.builder().vehicleId("VIN-B").build());
+		writer().write(new Chunk<>(List.of(done)));
+		String pendingA = "VIN-A";
+		String pendingB = "VIN-B";
 		savedMetric(pendingB, "2026-11-25T00:00:00Z", tally(10_000, 0, 0));
 		savedMetric(pendingA, "2026-11-25T00:00:00Z", tally(10_000, 0, 0));
 		savedMetric(pendingA, "2026-11-25T01:00:00Z", tally(10_000, 0, 0));
@@ -204,15 +199,11 @@ class ScoreReportWriterTest {
 				scoreProperties.settleDelay(), scoreProperties.weights(), scoreProperties.nightRates(), scoreProperties.bases());
 	}
 
-	private Driver savedDriver() {
-		return driverRepository.save(Driver.builder().vehicleId("0DS614RB2TT925001").build());
-	}
-
-	private TripScoreMetric savedMetric(Driver driver, String endedAt, ScoreTally tally) {
-		Trip trip = tripRepository.save(Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(++tid).build());
+	private TripScoreMetric savedMetric(String vehicleId, String endedAt, ScoreTally tally) {
+		Trip trip = tripRepository.save(Trip.builder().vehicleId(vehicleId).tid(++tid).build());
 		return metricRepository.save(TripScoreMetric.builder()
 				.trip(trip)
-				.vehicleId(driver.getVehicleId())
+				.vehicleId(vehicleId)
 				.endedAt(Instant.parse(endedAt))
 				.tally(tally)
 				.build());

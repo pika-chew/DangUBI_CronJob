@@ -4,19 +4,9 @@
 -- 식별자 컬럼(vehicle_id, *idempotency_key)은 utf8mb4_bin으로 대소문자를 구분한다.
 -- 기본 정렬 규칙(utf8mb4_0900_ai_ci)은 대소문자를 무시해, Writer(Java)의 중복 판단과 DB 유니크 키가 어긋난다.
 
-CREATE TABLE IF NOT EXISTS driver (
-    id          BIGINT       NOT NULL AUTO_INCREMENT,
-    vehicle_id  VARCHAR(64)  COLLATE utf8mb4_bin  NOT NULL,
-    created_at  DATETIME(3)  NOT NULL,
-    updated_at  DATETIME(3)  NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT uk_driver_vehicle_id UNIQUE (vehicle_id)
-);
-
 -- ty=3 요약값은 Lambda가 보내는 필드(stt, edt, dis, hsts, mesp, dtvt)만 저장한다 (docs/ingest-spec.md 6장).
 CREATE TABLE IF NOT EXISTS trip (
     id                    BIGINT        NOT NULL AUTO_INCREMENT,
-    driver_id             BIGINT        NOT NULL,
     vehicle_id            VARCHAR(64)   COLLATE utf8mb4_bin  NOT NULL,
     tid                   BIGINT        NOT NULL,
     status                VARCHAR(16)   NOT NULL,
@@ -34,9 +24,7 @@ CREATE TABLE IF NOT EXISTS trip (
     created_at            DATETIME(3)   NOT NULL,
     updated_at            DATETIME(3)   NOT NULL,
     PRIMARY KEY (id),
-    CONSTRAINT uk_trip_vehicle_id_tid UNIQUE (vehicle_id, tid),
-    CONSTRAINT fk_trip_driver FOREIGN KEY (driver_id) REFERENCES driver (id),
-    INDEX idx_trip_driver_id_started_at (driver_id, started_at)
+    CONSTRAINT uk_trip_vehicle_id_tid UNIQUE (vehicle_id, tid)
 );
 
 -- 점수 계산에 쓰는 값(clt, sp, em)만 저장한다. 나머지 필드는 Swift 원본에만 남는다 (docs/ingest-spec.md 6장).

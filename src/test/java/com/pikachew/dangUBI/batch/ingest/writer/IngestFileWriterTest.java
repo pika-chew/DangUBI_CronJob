@@ -16,7 +16,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.pikachew.dangUBI.batch.ingest.dto.ParsedTelemetryFile;
-import com.pikachew.dangUBI.domain.driver.repository.DriverRepository;
 import com.pikachew.dangUBI.domain.outbox.entity.Outbox;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxAggregateType;
 import com.pikachew.dangUBI.domain.outbox.entity.OutboxEventType;
@@ -52,9 +51,6 @@ class IngestFileWriterTest {
 	private IngestFileWriter writer;
 
 	@Autowired
-	private DriverRepository driverRepository;
-
-	@Autowired
 	private TripRepository tripRepository;
 
 	@Autowired
@@ -67,7 +63,7 @@ class IngestFileWriterTest {
 	private EntityManager entityManager;
 
 	@Test
-	void microtrip만_오면_진행_중인_trip과_운전자를_만든다() {
+	void microtrip만_오면_진행_중인_trip을_만든다() {
 		write(List.of(), List.of(
 				microtrip(V1, 354, "m1", "2026-11-10T10:30:00Z"),
 				microtrip(V1, 354, "m2", "2026-11-10T10:00:00Z")));
@@ -76,7 +72,7 @@ class IngestFileWriterTest {
 		assertThat(trip.getStatus()).isEqualTo(TripStatus.IN_PROGRESS);
 		assertThat(trip.getFirstCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:00:00Z"));
 		assertThat(trip.getLastCollectedAt()).isEqualTo(Instant.parse("2026-11-10T10:30:00Z"));
-		assertThat(trip.getDriver().getVehicleId()).isEqualTo(V1);
+		assertThat(trip.getVehicleId()).isEqualTo(V1);
 		assertThat(microtripRepository.findByTripOrderByCollectedAt(trip))
 				.extracting(TripMicrotrip::getIdempotencyKey).containsExactly("m2", "m1");
 	}
@@ -136,7 +132,6 @@ class IngestFileWriterTest {
 		write(trips, microtrips);
 		write(trips, microtrips);
 
-		assertThat(driverRepository.count()).isEqualTo(1);
 		assertThat(tripRepository.count()).isEqualTo(1);
 		assertThat(microtripRepository.count()).isEqualTo(2);
 		assertThat(findTrip(V1, 354).getStatus()).isEqualTo(TripStatus.COMPLETED);
@@ -161,22 +156,12 @@ class IngestFileWriterTest {
 	}
 
 	@Test
-	void 대소문자만_다른_차량은_다른_운전자와_trip이다() {
+	void 대소문자만_다른_차량은_다른_trip이다() {
 		write(List.of(), List.of(microtrip("Car-1", 354, "m1", TRIP_START)));
 		write(List.of(), List.of(microtrip("car-1", 354, "m2", TRIP_START)));
 
-		assertThat(driverRepository.count()).isEqualTo(2);
 		assertThat(tripRepository.count()).isEqualTo(2);
-		assertThat(findTrip("car-1", 354).getDriver().getVehicleId()).isEqualTo("car-1");
-	}
-
-	@Test
-	void 같은_차량의_여러_trip은_운전자를_공유한다() {
-		write(List.of(trip(V1, 354, TRIP_START, TRIP_END, 1)), List.of(microtrip(V1, 355, "m1", TRIP_END)));
-		write(List.of(), List.of(microtrip(V1, 356, "m2", TRIP_END)));
-
-		assertThat(driverRepository.count()).isEqualTo(1);
-		assertThat(tripRepository.count()).isEqualTo(3);
+		assertThat(findTrip("car-1", 354).getVehicleId()).isEqualTo("car-1");
 	}
 
 	@Test
@@ -186,7 +171,6 @@ class IngestFileWriterTest {
 				microtrip("vehicle-002", 354, "m2", TRIP_START)));
 
 		assertThat(tripRepository.count()).isEqualTo(2);
-		assertThat(driverRepository.count()).isEqualTo(2);
 	}
 
 	@Test
@@ -215,7 +199,6 @@ class IngestFileWriterTest {
 		Trip trip = findTrip(V1, 354);
 		assertThat(trip.getCreatedAt()).isNotNull();
 		assertThat(trip.getUpdatedAt()).isNotNull();
-		assertThat(trip.getDriver().getCreatedAt()).isNotNull();
 	}
 
 	@Test
@@ -227,7 +210,7 @@ class IngestFileWriterTest {
 		assertThat(outboxes).extracting(Outbox::getEventType, Outbox::getStatus)
 				.containsExactly(tuple(OutboxEventType.TRIP_STARTED, OutboxStatus.PENDING));
 		assertThat(JsonMapper.shared().readValue(outboxes.get(0).getPayload(), TripOutboxPayload.class))
-				.isEqualTo(new TripOutboxPayload(trip.getId(), trip.getDriver().getId(), V1, 354));
+				.isEqualTo(new TripOutboxPayload(trip.getId(), V1, 354));
 	}
 
 	@Test

@@ -17,7 +17,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import com.pikachew.dangUBI.batch.score.config.ScoreProperties;
-import com.pikachew.dangUBI.domain.driver.entity.Driver;
 import com.pikachew.dangUBI.domain.score.entity.ScoreTally;
 import com.pikachew.dangUBI.domain.score.entity.TripScoreMetric;
 import com.pikachew.dangUBI.domain.score.model.ScoreWeights;
@@ -36,7 +35,7 @@ class TripScoreMetricProcessorTest {
 	private final TripRepository tripRepository = mock(TripRepository.class);
 	private final TripMicrotripRepository microtripRepository = mock(TripMicrotripRepository.class);
 	private final TripScoreMetricProcessor processor = new TripScoreMetricProcessor(tripRepository, microtripRepository, PROPERTIES);
-	private final Driver driver = Driver.builder().vehicleId("0DS614RB2TT925001").build();
+	private final String vehicleId = "0DS614RB2TT925001";
 
 	@Test
 	void microtrip으로_판정한_이벤트와_dis를_지표로_만든다() {
@@ -90,7 +89,7 @@ class TripScoreMetricProcessorTest {
 	}
 
 	private Trip completedTrip(TripSnapshot snapshot) {
-		Trip trip = Trip.builder().driver(driver).vehicleId(driver.getVehicleId()).tid(snapshot.tid()).build();
+		Trip trip = Trip.builder().vehicleId(vehicleId).tid(snapshot.tid()).build();
 		trip.complete(snapshot);
 		return trip;
 	}
