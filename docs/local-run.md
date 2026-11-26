@@ -55,7 +55,18 @@ S3·Swift·SQS 없이 reconcileJob과 ingestJob을 로컬에서 돌린다. local
    기대 로그: `파일 2개, microtrip 저장 3건·중복 0건, trip 종료 1건, 새 trip 1건, 건너뛴 줄 1줄`
    기대 데이터: `trip`에 vehicle-001 tid 1이 `COMPLETED`, `trip_microtrip` 3행
 
-같은 `targetDate`로 이미 완료된 Job은 다시 실행되지 않는다. 다시 돌리려면 `rerun=2`처럼 이전에 쓰지 않은 파라미터를 붙이거나, DB를 비운다(`docker compose down -v`).
+5. scoreJob을 실행한다. 샘플은 15km뿐이라 테스트 기준(구간 50km)으로도 구간이 닫히지 않는다.
+
+   ```bash
+   ./gradlew bootRun --args='--spring.profiles.active=local --spring.batch.job.name=scoreJob --ubi.batch.score.basis=test'
+   ```
+
+   기대 로그: `score metric chunk: trip 지표 1건 저장`, `score report chunk: 운전자 1명, 닫은 구간 0개, 리포트 1건`
+   기대 데이터: `trip_score_metric` 1행(급가속 1회, 급회전 2회), `driver_score_report` 1행(`score` NULL), `outbox`에 `DRIVER_SCORE_REPORTED` 1행
+
+   scoreJob은 파라미터 없이 매번 새 실행을 만든다. 다시 실행해도 새로 종료된 trip이 없으면 아무것도 만들지 않는다.
+
+같은 `targetDate`로 이미 완료된 ingestJob·reconcileJob은 다시 실행되지 않는다. 다시 돌리려면 `rerun=2`처럼 이전에 쓰지 않은 파라미터를 붙이거나, DB를 비운다(`docker compose down -v`).
 
 ## 3306 포트를 이미 쓰고 있을 때
 
