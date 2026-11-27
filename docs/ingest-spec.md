@@ -127,7 +127,8 @@ ingestJob Writer가 trip을 저장하는 chunk 트랜잭션 안에서 함께 기
 
 ## 8. 하루 실행 순서 (UTC)
 
-매일 **UTC 02:00(KST 11:00)**에 `dailyJob` 하나를 실행한다. 파라미터 없이 띄우면 `targetDate` = 어제(UTC) = D다.
+매일 **KST 03:00(전날 UTC 18:00)**에 `dailyJob` 하나를 실행한다. 파라미터 없이 띄우면 `targetDate` = 어제(UTC) = D다.
+실행 시각이 UTC로는 전날이라, D는 KST 날짜로 이틀 전 UTC 하루다. 예를 들어 KST 11-28 03:00 실행은 11-26을 처리한다. D가 끝난 지 18시간 뒤라 그날 파일이 모두 들어와 있다.
 
 | 순서 | Step | 내용 |
 | --- | --- | --- |
@@ -152,8 +153,8 @@ kind: CronJob
 metadata:
   name: dangubi-daily
 spec:
-  schedule: "0 2 * * *"
-  timeZone: "Etc/UTC"
+  schedule: "0 3 * * *"
+  timeZone: "Asia/Seoul"
   concurrencyPolicy: Forbid        # 전날 실행이 길어져도 겹치지 않게. STARTED로 남은 실행을 자동 정리하는 전제다
   startingDeadlineSeconds: 3600
   jobTemplate:

@@ -70,7 +70,7 @@ S3·Swift·SQS 없이 reconcileJob과 ingestJob을 로컬에서 돌린다. local
 
 ## 하루 파이프라인 (dailyJob)
 
-운영에서는 매일 UTC 02:00에 `dailyJob`이 어제(UTC) 하루치를 reconcile → 복사 대기 → ingest → score 순서로 처리한다 (ingest-spec.md 8장). 로컬에서는 날짜를 지정해 돌린다.
+운영에서는 매일 KST 03:00에 `dailyJob`이 어제(UTC) 하루치를 reconcile → 복사 대기 → ingest → score 순서로 처리한다 (ingest-spec.md 8장). 로컬에서는 날짜를 지정해 돌린다.
 
 ```bash
 scripts/make-local-sample.sh
