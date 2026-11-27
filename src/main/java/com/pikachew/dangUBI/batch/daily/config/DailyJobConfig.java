@@ -24,7 +24,7 @@ import com.pikachew.dangUBI.batch.daily.tasklet.RequeueWaitTasklet;
 /**
  * dailyJob: 어제(UTC) 하루치를 reconcile → 복사 대기 → ingest → score 순서로 처리한다 (docs/ingest-spec.md 8장).
  *
- * 실행: --spring.batch.job.name=dailyJob   (매일 UTC 02:00, K8s CronJob)
+ * 실행: --spring.batch.job.name=dailyJob   (매일 KST 03:00, K8s CronJob)
  * 파라미터는 받지 않는다. DailyTargetDateIncrementer가 targetDate = 어제(UTC)를 붙인다.
  * 특정 날짜를 돌리려면 --ubi.batch.daily.target-date=2026-11-20을 주거나 개별 Job(reconcileJob, ingestJob, scoreJob)을 쓴다.
  *
